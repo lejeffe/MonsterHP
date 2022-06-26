@@ -137,11 +137,16 @@ public class MonsterHPPlugin extends Plugin
 					{
 						wnpc.setCurrentHp(monsterHP);
 						wnpc.setLastHp(monsterHP);
+						wnpc.setDead(false);
 					}
 				}
 				else
 				{
 					wnpc.setCurrentHp(0);
+					if(config.hideDeath())
+					{
+						wnpc.setDead(true);
+					}
 				}
 			}
 		}

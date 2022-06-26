@@ -142,6 +142,18 @@ public interface MonsterHPConfig extends Config
 
 	@ConfigItem(
 		position = 8,
+		keyName = "hideDeath",
+		name = "Hide hp on death",
+		description = "Hides the hp when the npc dies. Works nicely with the entity hider: Hide Dead NPCs option",
+		section = hp_settings
+	)
+	default boolean hideDeath()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		position = 9,
 		keyName = "fontName",
 		name = "Font",
 		description = "Name of the font to use for the hp shown. Leave blank to use RuneLite setting.",
@@ -153,7 +165,7 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 9,
+		position = 10,
 		keyName = "fontStyle",
 		name = "Font style",
 		description = "Style of the font to use for the hp shown. Only works with custom font.",
@@ -165,7 +177,7 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 10,
+		position = 11,
 		keyName = "fontSize",
 		name = "Font size",
 		description = "Size of the font to use for XP drops. Only works with custom font.",

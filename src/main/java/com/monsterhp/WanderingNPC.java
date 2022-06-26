@@ -29,6 +29,10 @@ public class WanderingNPC
 	@Setter
 	private double lastHp;
 
+	@Getter
+	@Setter
+	private boolean isDead;
+
 
 	WanderingNPC(NPC npc)
 	{
@@ -38,5 +42,6 @@ public class WanderingNPC
 		this.currentLocation = npc.getWorldLocation();
 		this.currentHp = 100;
 		this.lastHp = 3000;
+		this.isDead = false;
 	}
 }

@@ -63,24 +63,28 @@ public class MonsterHPOverlay extends Overlay
 
 	private void renderTimer(final WanderingNPC npc, final Graphics2D graphics)
 	{
-		Color timerColor = config.normalHPColor();
-
-		if (config.useLowHP() && npc.getCurrentHp()<config.lowHPThreshold())
+		if(!npc.isDead())
 		{
-			timerColor = config.lowHPColor();
-		}
+			Color timerColor = config.normalHPColor();
 
-		String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
-		Point canvasPoint;
-		if(config.aboveHPBar()){
-			canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
-		}
-		else
-		{
-			canvasPoint= npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getGraphicHeight() + config.HPHeight());
-		}
+			if (config.useLowHP() && npc.getCurrentHp() < config.lowHPThreshold())
+			{
+				timerColor = config.lowHPColor();
+			}
 
-		OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
+			String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
+			Point canvasPoint;
+			if (config.aboveHPBar())
+			{
+				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
+			}
+			else
+			{
+				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getGraphicHeight() + config.HPHeight());
+			}
+
+			OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
+		}
 	}
 	private void updateFont()
 	{
