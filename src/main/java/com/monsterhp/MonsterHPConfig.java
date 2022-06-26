@@ -4,11 +4,44 @@ import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 
 @ConfigGroup("MonsterHP")
 public interface MonsterHPConfig extends Config
 {
+	enum FontStyle
+	{
+		BOLD("Bold"),
+		ITALICS("Italics"),
+		BOLD_ITALICS("Bold and italics"),
+		DEFAULT("Default");
+
+		String name;
+
+		FontStyle(String name)
+		{
+			this.name = name;
+		}
+
+		public String getName()
+		{
+			return name;
+		}
+	}
+	@ConfigSection(
+		name = "hp settings",
+		description = "Settings relating to hp",
+		position = 1
+	)
+	String hp_settings = "hp_settings";
+
+	@ConfigSection(
+		name = "font settings",
+		description = "Settings relating to fonts",
+		position = 2
+	)
+	String font_settings = "font_settings";
 	@ConfigItem(
 		position = 0,
 		keyName = "showOverlay",
@@ -24,43 +57,23 @@ public interface MonsterHPConfig extends Config
 		position = 1,
 		keyName = "npcToShowHp",
 		name = "NPC Names",
-		description = "Enter names of NPCs where you wish to use this plugin"
+		description = "Enter names of NPCs where you wish to use this plugin",
+		section = hp_settings
 	)
 	default String npcToShowHp()
 	{
 		return "";
 	}
 
-//	@ConfigItem(
-//		position = 2,
-//		keyName = "showOverlayId",
-//		name = "Activate on NPC Id",
-//		description = "Configures whether or not to have the HP shown over the given NPC Id's"
-//	)
-//	default boolean showOverlayId()
-//	{
-//		return true;
-//	}
-//
-//	@ConfigItem(
-//		position = 3,
-//		keyName = "npcIdToShowHp",
-//		name = "NPC Id's",
-//		description = "Enter the NPC Id's where you wish to use this plugin"
-//	)
-//	default String npcIdToShowHp()
-//	{
-//		return "";
-//	}
-
 	@Range(
 		max = 300
 	)
 	@ConfigItem(
-		position = 4,
+		position = 2,
 		keyName = "normalHPColor",
 		name = "Default hp overlay color",
-		description = "Choose the color to be used on the hp"
+		description = "Choose the color to be used on the hp",
+		section = hp_settings
 	)
 	default Color normalHPColor()
 	{
@@ -68,10 +81,11 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 5,
+		position = 3,
 		keyName = "useLowHP",
 		name = "Use low HP threshold",
-		description = "Configures whether or not you wish to use a 2nd color when the monster hp hits below the low hp threshold"
+		description = "Configures whether or not you wish to use a 2nd color when the monster hp hits below the low hp threshold",
+		section = hp_settings
 	)
 	default boolean useLowHP()
 	{
@@ -79,10 +93,11 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 6,
+		position = 4,
 		keyName = "lowHPThreshold",
 		name = "Low HP threshold",
-		description = "Used to set the low HP threshold"
+		description = "Used to set the low HP threshold",
+		section = hp_settings
 	)
 	default int lowHPThreshold()
 	{
@@ -90,10 +105,11 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 7,
+		position = 5,
 		keyName = "lowHPColor",
 		name = "Overlay color Low HP",
-		description = "Choose the color to be used when the hp of the npc is below the chosen hp threshold"
+		description = "Choose the color to be used when the hp of the npc is below the chosen hp threshold",
+		section = hp_settings
 	)
 	default Color lowHPColor()
 	{
@@ -101,13 +117,62 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 8,
+		position = 6,
+		keyName = "aboveHPBar",
+		name = "Above HP bar",
+		description = "Hp above the monsters hp bar, otherwise the Hp is show on the body of the NPC",
+		section = hp_settings
+	)
+	default boolean aboveHPBar()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		position = 7,
 		keyName = "HPHeight",
-		name = "Height above NPC",
-		description = "Change the vertical offset of the HP above the npc"
+		name = "Height of the HP",
+		description = "Change the vertical offset of the HP above the npc body or the HP bar",
+		section = hp_settings
 	)
 	default int HPHeight()
 	{
 		return 25;
+	}
+
+	@ConfigItem(
+		position = 8,
+		keyName = "fontName",
+		name = "Font",
+		description = "Name of the font to use for the hp shown. Leave blank to use RuneLite setting.",
+		section = font_settings
+	)
+	default String fontName()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		position = 9,
+		keyName = "fontStyle",
+		name = "Font style",
+		description = "Style of the font to use for the hp shown. Only works with custom font.",
+		section = font_settings
+	)
+	default FontStyle fontStyle()
+	{
+		return FontStyle.DEFAULT;
+	}
+
+	@ConfigItem(
+		position = 10,
+		keyName = "fontSize",
+		name = "Font size",
+		description = "Size of the font to use for XP drops. Only works with custom font.",
+		section = font_settings
+	)
+	default int fontSize()
+	{
+		return 15;
 	}
 }
