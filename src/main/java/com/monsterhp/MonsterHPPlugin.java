@@ -130,9 +130,14 @@ public class MonsterHPPlugin extends Plugin
 
 			if(config.showOverlay())
 			{
+				double monsterHP = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
 				if (!npc.isDead())
 				{
-					wnpc.setCurrentHp(((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100));
+					if(wnpc.getLastHp()>= monsterHP)
+					{
+						wnpc.setCurrentHp(monsterHP);
+						wnpc.setLastHp(monsterHP);
+					}
 				}
 				else
 				{

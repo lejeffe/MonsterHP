@@ -25,6 +25,11 @@ public class WanderingNPC
 	@Setter
 	private double currentHp;
 
+	@Getter
+	@Setter
+	private double lastHp;
+
+
 	WanderingNPC(NPC npc)
 	{
 		this.npc = npc;
@@ -32,5 +37,6 @@ public class WanderingNPC
 		this.npcIndex = npc.getIndex();
 		this.currentLocation = npc.getWorldLocation();
 		this.currentHp = 100;
+		this.lastHp = 3000;
 	}
 }
