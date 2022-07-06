@@ -83,7 +83,16 @@ public class MonsterHPOverlay extends Overlay
 				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, config.HPHeight());
 			}
 
-			OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
+			if (config.stackHp())
+			{
+				int offSet = (int) (npc.getOffset() * config.fontSize() * 0.85);
+				Point stackOffset = new Point(canvasPoint.getX(), canvasPoint.getY() + offSet);
+				OverlayUtil.renderTextLocation(graphics, stackOffset, currentHPString, timerColor);
+			}
+			else
+			{
+				OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
+			}
 		}
 	}
 	private void updateFont()

@@ -154,6 +154,18 @@ public interface MonsterHPConfig extends Config
 
 	@ConfigItem(
 		position = 9,
+		keyName = "stackHp",
+		name = "Stack monster HP",
+		description = "Stacks the HP numbers on top of each other if multiple npc's are on the same tile",
+		section = hp_settings
+	)
+	default boolean stackHp()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		position = 10,
 		keyName = "fontName",
 		name = "Font",
 		description = "Name of the font to use for the hp shown. Leave blank to use RuneLite setting.",
@@ -165,7 +177,7 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 10,
+		position = 11,
 		keyName = "fontStyle",
 		name = "Font style",
 		description = "Style of the font to use for the hp shown. Only works with custom font.",
@@ -177,7 +189,7 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 11,
+		position = 12,
 		keyName = "fontSize",
 		name = "Font size",
 		description = "Size of the font to use for XP drops. Only works with custom font.",

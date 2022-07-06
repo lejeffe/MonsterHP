@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.NpcDespawned;
@@ -49,6 +50,8 @@ public class MonsterHPPlugin extends Plugin
 
 	private List<String> selectedNPCs = new ArrayList<>();
 
+	private HashMap<Integer, WorldPoint> npcLocations = new HashMap<>();
+
 	@Provides
 	MonsterHPConfig getConfig(ConfigManager configManager)
 	{
@@ -67,6 +70,7 @@ public class MonsterHPPlugin extends Plugin
 	{
 		overlayManager.remove(monsterhpoverlay);
 		wanderingNPCs.clear();
+		npcLocations.clear();
 	}
 
 	@Subscribe
@@ -83,6 +87,7 @@ public class MonsterHPPlugin extends Plugin
 
 
 		wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
+		npcLocations.put(npc.getIndex(), npc.getWorldLocation());
 	}
 
 	@Subscribe
@@ -97,6 +102,7 @@ public class MonsterHPPlugin extends Plugin
 		}
 
 		wanderingNPCs.remove(npc.getIndex());
+		npcLocations.remove(npc.getIndex());
 	}
 
 	@Subscribe
@@ -106,12 +112,25 @@ public class MonsterHPPlugin extends Plugin
 			gameStateChanged.getGameState() == GameState.HOPPING)
 		{
 			wanderingNPCs.clear();
+			npcLocations.clear();
 		}
 	}
 
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		HashMap<WorldPoint, Integer> locationCount = new HashMap<>();
+		for (WorldPoint location : npcLocations.values())
+		{
+			if (locationCount.containsKey(location))
+			{
+				locationCount.put(location, locationCount.get(location) + 1);
+			}
+			else
+			{
+				locationCount.put(location, 1);
+			}
+		}
 		for (NPC npc : client.getNpcs())
 		{
 			final String npcName = npc.getName();
@@ -133,11 +152,16 @@ public class MonsterHPPlugin extends Plugin
 				double monsterHP = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
 				if (!npc.isDead())
 				{
-					if(wnpc.getLastHp()>= 0)
+					if((npc.getHealthRatio()/npc.getHealthScale() != 1))
 					{
 						wnpc.setCurrentHp(monsterHP);
-						wnpc.setLastHp(monsterHP);
+						wnpc.setCurrentLocation(npc.getWorldLocation());
 						wnpc.setDead(false);
+						if (locationCount.containsKey(wnpc.getCurrentLocation()))
+						{
+							wnpc.setOffset(locationCount.get(wnpc.getCurrentLocation())-1);
+							locationCount.put(wnpc.getCurrentLocation(), locationCount.get(wnpc.getCurrentLocation()) - 1);
+						}
 					}
 				}
 				else if(npc.isDead())
@@ -148,6 +172,8 @@ public class MonsterHPPlugin extends Plugin
 						wnpc.setDead(true);
 					}
 				}
+
+				npcLocations.put(wnpc.getNpcIndex(), wnpc.getCurrentLocation());
 			}
 		}
 	}
@@ -192,6 +218,7 @@ public class MonsterHPPlugin extends Plugin
 			}
 
 			wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
+			npcLocations.put(npc.getIndex(), npc.getWorldLocation());
 		}
 	}
 }
