@@ -133,14 +133,14 @@ public class MonsterHPPlugin extends Plugin
 				double monsterHP = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
 				if (!npc.isDead())
 				{
-					if(wnpc.getLastHp()>= monsterHP)
+					if(wnpc.getLastHp()>= 0)
 					{
 						wnpc.setCurrentHp(monsterHP);
 						wnpc.setLastHp(monsterHP);
 						wnpc.setDead(false);
 					}
 				}
-				else
+				else if(npc.isDead())
 				{
 					wnpc.setCurrentHp(0);
 					if(config.hideDeath())
@@ -155,11 +155,6 @@ public class MonsterHPPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged configChanged)
 	{
-		if (!configChanged.getGroup().equals("monsterhpplugin"))
-		{
-			return;
-		}
-
 		selectedNPCs = getSelectedNPCs();
 		rebuildAllNpcs();
 	}
