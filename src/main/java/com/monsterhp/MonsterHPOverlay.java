@@ -80,7 +80,7 @@ public class MonsterHPOverlay extends Overlay
 			}
 			else
 			{
-				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getGraphicHeight() + config.HPHeight());
+				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, config.HPHeight());
 			}
 
 			OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
