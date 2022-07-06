@@ -161,7 +161,7 @@ public interface MonsterHPConfig extends Config
 	)
 	default String fontName()
 	{
-		return "";
+		return "roboto";
 	}
 
 	@ConfigItem(
