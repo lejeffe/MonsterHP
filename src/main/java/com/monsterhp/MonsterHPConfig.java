@@ -73,7 +73,7 @@ public interface MonsterHPConfig extends Config
 	)
 	default boolean npcShowAll()
 	{
-		return true;
+		return false;
 	}
 	@Range(
 		max = 300
