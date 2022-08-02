@@ -64,7 +64,17 @@ public interface MonsterHPConfig extends Config
 	{
 		return "";
 	}
-
+	@ConfigItem(
+			position = 1,
+			keyName = "npcShowAll",
+			name = "Show All",
+			description = "Show for all NPCs",
+			section = hp_settings
+	)
+	default boolean npcShowAll()
+	{
+		return true;
+	}
 	@Range(
 		max = 300
 	)
