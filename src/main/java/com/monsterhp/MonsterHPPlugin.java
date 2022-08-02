@@ -50,6 +50,8 @@ public class MonsterHPPlugin extends Plugin
 
 	private List<String> selectedNPCs = new ArrayList<>();
 
+	private boolean npcShowAll = true;
+
 	private HashMap<Integer, WorldPoint> npcLocations = new HashMap<>();
 
 	@Provides
@@ -62,6 +64,7 @@ public class MonsterHPPlugin extends Plugin
 	{
 		overlayManager.add(monsterhpoverlay);
 		selectedNPCs = getSelectedNPCs();
+		this.npcShowAll =  config.npcShowAll();
 		rebuildAllNpcs();
 	}
 
@@ -80,10 +83,7 @@ public class MonsterHPPlugin extends Plugin
 		final String npcName = npc.getName();
 		final int npcId = npc.getId();
 
-		if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase()))
-		{
-			return;
-		}
+		if (checkNPCName(npcName)) return;
 
 
 		wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
@@ -134,11 +134,8 @@ public class MonsterHPPlugin extends Plugin
 		for (NPC npc : client.getNpcs())
 		{
 			final String npcName = npc.getName();
-
-			if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase()))
-			{
-				continue;
-			}
+			// refactored npc name check to its own method
+			if (checkNPCName(npcName)) continue;
 
 			final WanderingNPC wnpc = wanderingNPCs.get(npc.getIndex());
 
@@ -178,10 +175,25 @@ public class MonsterHPPlugin extends Plugin
 		}
 	}
 
+	private boolean checkNPCName(String npcName) {
+		if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase()))
+		{
+			// only care about names if we are not applying to all NPCs
+			return !this.npcShowAll;
+		}
+		return false;
+	}
+
 	@Subscribe
 	public void onConfigChanged(ConfigChanged configChanged)
 	{
 		selectedNPCs = getSelectedNPCs();
+		/* update npc show all setting on every config change.
+		 * Definitely a better way to do this, but not too familiar with RL api/plugin coding.
+		 * So it will have to do for now...
+		 */
+
+		this.npcShowAll =  config.npcShowAll();
 		rebuildAllNpcs();
 	}
 
@@ -211,11 +223,8 @@ public class MonsterHPPlugin extends Plugin
 		for (NPC npc : client.getNpcs())
 		{
 			final String npcName = npc.getName();
-
-			if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase()))
-			{
-				continue;
-			}
+			// refactored npc name check to its own method
+			if (checkNPCName(npcName)) continue;
 
 			wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
 			npcLocations.put(npc.getIndex(), npc.getWorldLocation());
