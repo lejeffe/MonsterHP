@@ -73,7 +73,7 @@ public class MonsterHPOverlay extends Overlay
 			}
 
 			String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
-			Point canvasPoint;
+			Point canvasPoint = new Point(0,0);
 			if (config.aboveHPBar())
 			{
 				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
