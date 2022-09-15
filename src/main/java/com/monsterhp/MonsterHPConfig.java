@@ -176,6 +176,18 @@ public interface MonsterHPConfig extends Config
 
 	@ConfigItem(
 		position = 11,
+		keyName = "customFont",
+		name = "Enable custom fonts",
+		description = "Enabling this setting makes it possible to use the custom font from the box below this",
+		section = font_settings
+	)
+	default boolean customFont()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		position = 12,
 		keyName = "fontName",
 		name = "Font",
 		description = "Name of the font to use for the hp shown. Leave blank to use RuneLite setting.",
@@ -187,7 +199,7 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 12,
+		position = 13,
 		keyName = "fontStyle",
 		name = "Font style",
 		description = "Style of the font to use for the hp shown. Only works with custom font.",
@@ -199,7 +211,7 @@ public interface MonsterHPConfig extends Config
 	}
 
 	@ConfigItem(
-		position = 13,
+		position = 14,
 		keyName = "fontSize",
 		name = "Font size",
 		description = "Size of the font to use for XP drops. Only works with custom font.",

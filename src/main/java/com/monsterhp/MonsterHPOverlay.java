@@ -100,12 +100,14 @@ public class MonsterHPOverlay extends Overlay
 		//only perform anything within this function if any settings related to the font have changed
 		if(!lastFont.equals(config.fontName()) || lastFontSize != config.fontSize() || lastFontStyle != config.fontStyle())
 		{
-			lastFont = config.fontName();
+			if(config.customFont()){
+				lastFont = config.fontName();
+			}
 			lastFontSize = config.fontSize();
 			lastFontStyle = config.fontStyle();
 
 			//use runescape font as default
-			if (config.fontName().equals(""))
+			if (config.fontName().equals("") || config.customFont() == false)
 			{
 				if (config.fontSize() < 16)
 				{
