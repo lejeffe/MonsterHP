@@ -26,7 +26,7 @@ public class MonsterHPOverlay extends Overlay
 	protected MonsterHPConfig.FontStyle lastFontStyle = MonsterHPConfig.FontStyle.DEFAULT;
 	protected Font font = null;
 
-	NumberFormat format = new DecimalFormat("#");
+	NumberFormat format = new DecimalFormat("#.0");
 
 	@Inject
 	MonsterHPOverlay(MonsterHPPlugin plugin, MonsterHPConfig config)
