@@ -183,7 +183,7 @@ public interface MonsterHPConfig extends Config
 	)
 	default boolean increasePrecision()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(

@@ -19,13 +19,15 @@ public class MonsterHPOverlay extends Overlay
 {
 	private final MonsterHPPlugin plugin;
 	private final MonsterHPConfig config;
-	private final NumberFormat format;
 
 	protected String lastFont = "";
 	protected int lastFontSize = 0;
 	protected boolean useRunescapeFont = true;
 	protected MonsterHPConfig.FontStyle lastFontStyle = MonsterHPConfig.FontStyle.DEFAULT;
 	protected Font font = null;
+
+	NumberFormat format_no_dec = new DecimalFormat("#");
+	NumberFormat format_1_dec = new DecimalFormat("#.0");
 
 	@Inject
 	MonsterHPOverlay(MonsterHPPlugin plugin, MonsterHPConfig config)
@@ -34,7 +36,6 @@ public class MonsterHPOverlay extends Overlay
 		setLayer(OverlayLayer.ABOVE_SCENE);
 		this.plugin = plugin;
 		this.config = config;
-		this.format = config.increasePrecision() ? new DecimalFormat("#.0") : new DecimalFormat("#");
 	}
 
 	protected void handleFont(Graphics2D graphics)
@@ -71,6 +72,8 @@ public class MonsterHPOverlay extends Overlay
 			{
 				timerColor = config.lowHPColor();
 			}
+
+			NumberFormat format = config.increasePrecision() ? format_1_dec : format_no_dec;
 
 			String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
 			Point canvasPoint = new Point(0,0);
