@@ -63,36 +63,41 @@ public class MonsterHPOverlay extends Overlay
 
 	private void renderTimer(final WanderingNPC npc, final Graphics2D graphics)
 	{
-		if(!npc.isDead())
+		if(npc.isDead()) {
+			return;
+		}
+
+		Color timerColor = config.normalHPColor();
+
+		if (config.useLowHP() && npc.getCurrentHp() < config.lowHPThreshold())
 		{
-			Color timerColor = config.normalHPColor();
+			timerColor = config.lowHPColor();
+		}
 
-			if (config.useLowHP() && npc.getCurrentHp() < config.lowHPThreshold())
-			{
-				timerColor = config.lowHPColor();
-			}
+		String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
+		Point canvasPoint;
+		if (config.aboveHPBar())
+		{
+			canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
+		}
+		else
+		{
+			canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, config.HPHeight());
+		}
 
-			String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
-			Point canvasPoint = new Point(0,0);
-			if (config.aboveHPBar())
-			{
-				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
-			}
-			else
-			{
-				canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, config.HPHeight());
-			}
+		if(canvasPoint == null) {
+			return;
+		}
 
-			if (config.stackHp())
-			{
-				int offSet = (int) (npc.getOffset() * config.fontSize() * 0.85);
-				Point stackOffset = new Point(canvasPoint.getX(), canvasPoint.getY() + offSet);
-				OverlayUtil.renderTextLocation(graphics, stackOffset, currentHPString, timerColor);
-			}
-			else
-			{
-				OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
-			}
+		if (config.stackHp())
+		{
+			int offSet = (int) (npc.getOffset() * config.fontSize() * 0.85);
+			Point stackOffset = new Point(canvasPoint.getX(), canvasPoint.getY() + offSet);
+			OverlayUtil.renderTextLocation(graphics, stackOffset, currentHPString, timerColor);
+		}
+		else
+		{
+			OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
 		}
 	}
 	private void updateFont()
