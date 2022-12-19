@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.inject.Inject;
@@ -35,6 +36,10 @@ public class MonsterHPOverlay extends Overlay
 		setLayer(OverlayLayer.ABOVE_SCENE);
 		this.plugin = plugin;
 		this.config = config;
+		if(config.roundUp())
+		{
+			format.setRoundingMode(RoundingMode.UP);
+		}
 	}
 
 	protected void handleFont(Graphics2D graphics)

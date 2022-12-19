@@ -176,6 +176,18 @@ public interface MonsterHPConfig extends Config
 
 	@ConfigItem(
 		position = 11,
+		keyName = "roundUp",
+		name = "Always round up",
+		description = "Force rounding up. Useful for bosses that change phase after breaching HP percentage threshold.",
+		section = hp_settings
+	)
+	default boolean roundUp()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		position = 11,
 		keyName = "customFont",
 		name = "Enable custom fonts",
 		description = "Enabling this setting makes it possible to use the custom font from the box below this",
