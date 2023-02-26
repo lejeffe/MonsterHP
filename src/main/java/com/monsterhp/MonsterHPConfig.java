@@ -174,6 +174,22 @@ public interface MonsterHPConfig extends Config
 		return false;
 	}
 
+	@Range(
+			min = 0,
+			max = 2
+	)
+	@ConfigItem(
+			position = 11,
+			keyName = "decimalHp",
+			name = "Amount of decimals",
+			description = "Show 0-2 decimals of precision, e.g. 13.33 instead of 13.",
+			section = hp_settings
+	)
+	default int decimalHp()
+	{
+		return 0;
+	}
+
 	@ConfigItem(
 		position = 11,
 		keyName = "customFont",

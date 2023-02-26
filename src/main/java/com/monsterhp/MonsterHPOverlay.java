@@ -27,6 +27,8 @@ public class MonsterHPOverlay extends Overlay
 	protected Font font = null;
 
 	NumberFormat format = new DecimalFormat("#");
+	NumberFormat oneDecimalFormat = new DecimalFormat("#.#");
+	NumberFormat twoDecimalFormat = new DecimalFormat("#.##");
 
 	@Inject
 	MonsterHPOverlay(MonsterHPPlugin plugin, MonsterHPConfig config)
@@ -74,7 +76,18 @@ public class MonsterHPOverlay extends Overlay
 			timerColor = config.lowHPColor();
 		}
 
-		String currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
+		String currentHPString;
+		switch (config.decimalHp()) {
+			case 1:
+				currentHPString = String.valueOf(oneDecimalFormat.format(npc.getCurrentHp()));
+				break;
+			case 2:
+				currentHPString = String.valueOf(twoDecimalFormat.format(npc.getCurrentHp()));
+				break;
+			default:
+				currentHPString = String.valueOf(format.format(npc.getCurrentHp()));
+				break;
+		}
 		Point canvasPoint;
 		if (config.aboveHPBar())
 		{
