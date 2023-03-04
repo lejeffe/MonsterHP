@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.inject.Inject;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -187,14 +188,12 @@ public class MonsterHPPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged configChanged)
 	{
-		selectedNPCs = getSelectedNPCs();
-		/* update npc show all setting on every config change.
-		 * Definitely a better way to do this, but not too familiar with RL api/plugin coding.
-		 * So it will have to do for now...
-		 */
+		if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcToShowHp"))) {
+			selectedNPCs = getSelectedNPCs();
 
-		this.npcShowAll =  config.npcShowAll();
-		rebuildAllNpcs();
+			this.npcShowAll = config.npcShowAll();
+			rebuildAllNpcs();
+		}
 	}
 
 	@VisibleForTesting
