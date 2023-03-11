@@ -39,8 +39,6 @@ public class WanderingNPC {
     @Setter
     private int offset;
 
-    final String ATTACK_FIELD = "Attack";
-
 
     WanderingNPC(NPC npc) {
         this.npc = npc;
