@@ -65,7 +65,7 @@ public class MonsterHPOverlay extends Overlay {
     private String getCurrentHpString(WanderingNPC npc) {
         String currentHPString;
         if (config.numericHealth()) {
-            currentHPString = String.valueOf(npc.getCurrentHp());
+            currentHPString = String.valueOf((int) npc.getCurrentHp());
         } else {
             switch (config.decimalHp()) {
                 case 1:
