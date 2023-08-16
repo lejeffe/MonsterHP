@@ -58,7 +58,10 @@ public class MonsterHPOverlay extends Overlay {
         updateFont();
         handleFont(graphics);
         if (config.showOverlay()) {
-            plugin.getWanderingNPCs().forEach((id, npc) -> renderTimer(npc, graphics));
+            plugin.getWanderingNPCs().forEach((id, npc) -> {
+                if (config.npcHideFull() && npc.getHealthRatio() == 100) return;
+                renderTimer(npc, graphics);
+            });
         }
         return null;
     }
