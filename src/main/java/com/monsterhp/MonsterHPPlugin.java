@@ -93,12 +93,6 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onNpcDespawned(NpcDespawned npcDespawned) {
         final NPC npc = npcDespawned.getNpc();
-        final String npcName = npc.getName();
-
-        if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase())) {
-            return;
-        }
-
         wanderingNPCs.remove(npc.getIndex());
         npcLocations.remove(npc.getIndex());
     }
