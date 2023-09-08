@@ -233,4 +233,15 @@ public interface MonsterHPConfig extends Config {
     default boolean numericHealth() {
         return false;
     }
+
+    @ConfigItem(
+            position = 16,
+            keyName = "npcHideFull",
+            name = "Hide hp when full",
+            description = "Hides the hp when the npc has not been damaged. Works nicely with the Show All option",
+            section = hp_settings
+    )
+    default boolean npcHideFull() {
+        return false;
+    }
 }

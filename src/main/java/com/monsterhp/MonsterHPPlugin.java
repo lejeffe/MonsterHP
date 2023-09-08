@@ -55,6 +55,8 @@ public class MonsterHPPlugin extends Plugin {
 
     private boolean npcShowAll = true;
 
+    private boolean npcHideFull = false;
+
     private HashMap<Integer, WorldPoint> npcLocations = new HashMap<>();
 
     @Provides
@@ -67,6 +69,7 @@ public class MonsterHPPlugin extends Plugin {
         overlayManager.add(monsterhpoverlay);
         selectedNPCs = getSelectedNPCs();
         this.npcShowAll = config.npcShowAll();
+        this.npcHideFull = config.npcHideFull();
         rebuildAllNpcs();
     }
 
@@ -80,11 +83,7 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onNpcSpawned(NpcSpawned npcSpawned) {
         final NPC npc = npcSpawned.getNpc();
-        final String npcName = npc.getName();
-        final int npcId = npc.getId();
-
-        if (checkNPCName(npcName)) return;
-
+        if (shouldIgnoreNPC(npc)) return;
 
         wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
         npcLocations.put(npc.getIndex(), npc.getWorldLocation());
@@ -117,15 +116,16 @@ public class MonsterHPPlugin extends Plugin {
             }
         }
         for (NPC npc : client.getNpcs()) {
-            final String npcName = npc.getName();
-            // refactored npc name check to its own method
-            if (checkNPCName(npcName)) continue;
+            if (shouldIgnoreNPC(npc)) continue;
 
-            final WanderingNPC wnpc = wanderingNPCs.get(npc.getIndex());
+            WanderingNPC wnpc = wanderingNPCs.get(npc.getIndex());
 
             if (wnpc == null) {
-                continue;
+                wnpc = new WanderingNPC(npc);
+                wanderingNPCs.putIfAbsent(npc.getIndex(), wnpc);
+                npcLocations.put(npc.getIndex(), npc.getWorldLocation());
             }
+
             double monsterHP = 0;
             if (config.showOverlay()) {
                 monsterHP = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
@@ -151,20 +151,27 @@ public class MonsterHPPlugin extends Plugin {
         }
     }
 
-    private boolean checkNPCName(String npcName) {
-        if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase())) {
-            // only care about names if we are not applying to all NPCs
-            return !this.npcShowAll;
-        }
-        return false;
+    private boolean shouldIgnoreNPC(NPC npc) {
+        final String npcName = npc.getName();
+        final boolean npcIsFull = npc.getHealthRatio() == npc.getHealthScale();
+
+        if (this.npcHideFull && npcIsFull) return true;
+        if (this.npcShowAll) return false;
+
+        return npcName == null || !selectedNPCs.contains(npcName.toLowerCase());
     }
 
     @Subscribe
     public void onConfigChanged(ConfigChanged configChanged) {
-        if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcToShowHp"))) {
+        if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (
+                Objects.equals(configChanged.getKey(), "npcShowAll") ||
+                Objects.equals(configChanged.getKey(), "npcToShowHp") ||
+                Objects.equals(configChanged.getKey(), "npcHideFull")
+        )) {
             selectedNPCs = getSelectedNPCs();
 
             this.npcShowAll = config.npcShowAll();
+            this.npcHideFull = config.npcHideFull();
             rebuildAllNpcs();
         }
     }
@@ -189,9 +196,7 @@ public class MonsterHPPlugin extends Plugin {
         }
 
         for (NPC npc : client.getNpcs()) {
-            final String npcName = npc.getName();
-            // refactored npc name check to its own method
-            if (checkNPCName(npcName)) continue;
+            if (shouldIgnoreNPC(npc)) continue;
 
             wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
             npcLocations.put(npc.getIndex(), npc.getWorldLocation());
