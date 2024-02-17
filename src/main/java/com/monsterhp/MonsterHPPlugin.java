@@ -20,6 +20,7 @@ import net.runelite.api.NPC;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.NpcChanged;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.client.config.ConfigManager;
@@ -83,7 +84,7 @@ public class MonsterHPPlugin extends Plugin {
     public void onNpcSpawned(NpcSpawned npcSpawned) {
         final NPC npc = npcSpawned.getNpc();
 
-        if (!isNpcInList(npc.getName(), npc.getId())) return;
+        if (!isNpcInList(npc)) return;
 
         wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
         npcLocations.put(npc.getIndex(), npc.getWorldLocation());
@@ -94,6 +95,22 @@ public class MonsterHPPlugin extends Plugin {
         final NPC npc = npcDespawned.getNpc();
         wanderingNPCs.remove(npc.getIndex());
         npcLocations.remove(npc.getIndex());
+    }
+
+    // onNpcChanged is required for id listing to work when npc is changing id but name remain the same
+    // Example: npcs like phantom muspah have multiple ids but same static name
+    // so this applies and removes the text accordingly on npc id change if in list
+    @Subscribe
+    public void onNpcChanged(NpcChanged e) {
+        final NPC npc = e.getNpc();
+
+        if (isNpcInList(npc)) {
+            wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
+            npcLocations.put(npc.getIndex(), npc.getWorldLocation());
+        } else {
+            wanderingNPCs.remove(npc.getIndex());
+            npcLocations.remove(npc.getIndex());
+        }
     }
 
     @Subscribe
@@ -117,7 +134,7 @@ public class MonsterHPPlugin extends Plugin {
         }
 
         for (NPC npc : client.getNpcs()) {
-            if (!isNpcInList(npc.getName(), npc.getId())) {
+            if (!isNpcInList(npc)) {
                 continue;
             }
 
@@ -164,8 +181,8 @@ public class MonsterHPPlugin extends Plugin {
         return selectedNpcIDs.contains(npcIdString);
     }
 
-    private boolean isNpcInList(String npcName, int npcId) {
-        boolean isInList = (isNpcNameInList(npcName) || isNpcIdInList(npcId));
+    private boolean isNpcInList(NPC npc) {
+        boolean isInList = (isNpcNameInList(npc.getName()) || isNpcIdInList(npc.getId()));
 
         if (!isInList) {
             return this.npcShowAll;
@@ -215,7 +232,7 @@ public class MonsterHPPlugin extends Plugin {
         }
 
         for (NPC npc : client.getNpcs()) {
-            if (isNpcInList(npc.getName(), npc.getId())) {
+            if (isNpcInList(npc)) {
                 wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
                 npcLocations.put(npc.getIndex(), npc.getWorldLocation());
             }
