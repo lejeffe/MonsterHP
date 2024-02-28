@@ -10,6 +10,7 @@ import java.text.NumberFormat;
 import javax.inject.Inject;
 
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NpcID;
 import net.runelite.api.Point;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.ui.FontManager;
@@ -87,27 +88,38 @@ public class MonsterHPOverlay extends Overlay {
         if (npc.isDead()) {
             return;
         }
-        Color timerColor = config.normalHPColor();
-
-
+        
+        // Use Numeric health
         if (config.numericHealth()) {
-            try {
-                boolean isHealthBelowThreshold = npc.getHealthRatio() < config.lowHPThreshold();
-                //Use the current health ratio and round it according to monsters max hp
-                double numericHealth = Math.round((npc.getHealthRatio() / 100) * npcManager.getHealth(npc.getId()));
-                npc.setCurrentHp(numericHealth);
-                if (config.useLowHP() && isHealthBelowThreshold) {
-                    timerColor = config.lowHPColor();
+
+            Integer maxHealth = npcManager.getHealth(npc.getId());
+
+            // Some npcs return null when using npcManager as they seem to not be added with all details to static.runelite.net?
+            // i assume because health mimic mechanics like Duke Sucellus poison wakeup that has a 200 fake health before fight id
+            // https://github.com/runelite/static.runelite.net/blob/gh-pages/npcs/npcs.json
+            if (npc.getNpcName().equals("Duke Sucellus")) {
+                if (npc.getId() == NpcID.DUKE_SUCELLUS_12191) { // Duke Sucellus - fight id
+                    maxHealth = 440; // we assume its health is 440
                 }
-            } catch (Exception e) {
-                //todo: this will happend mostly because some wandering npcs have no real health and are not attackable, need to fix this
-                log.error("there was an error:" + e);
+                if (npc.getId() == NpcID.DUKE_SUCELLUS_12167) { // Duke Sucellus - pre fight id
+                    maxHealth = 200; // we assume its 'poison' health is 200
+                }
             }
-        } else {
-            if (config.useLowHP() && npc.getHealthRatio() < config.lowHPThreshold()) {
-                timerColor = config.lowHPColor();
+
+            if (maxHealth != null) {
+                // Use the current health ratio and round it according to monsters max hp
+                double numericHealth = (int) Math.floor((npc.getHealthRatio() / 100) * maxHealth);
+                npc.setCurrentHp(numericHealth);
             }
         }
+
+        // Coloring
+        Color timerColor = config.normalHPColor();
+        boolean isHealthBelowThreshold = npc.getHealthRatio() < config.lowHPThreshold();
+        if (config.useLowHP() && isHealthBelowThreshold) {
+            timerColor = config.lowHPColor();
+        }
+
         String currentHPString = getCurrentHpString(npc);
 
         Point canvasPoint;

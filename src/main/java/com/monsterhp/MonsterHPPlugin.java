@@ -17,12 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.NpcID;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.NpcChanged;
-import net.runelite.api.events.NpcDespawned;
-import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -83,34 +80,20 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onNpcSpawned(NpcSpawned npcSpawned) {
         final NPC npc = npcSpawned.getNpc();
-
         if (!isNpcInList(npc)) return;
 
-        wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
+        wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
         npcLocations.put(npc.getIndex(), npc.getWorldLocation());
     }
 
     @Subscribe
     public void onNpcDespawned(NpcDespawned npcDespawned) {
         final NPC npc = npcDespawned.getNpc();
+
+        if (npc == null || !isNpcInList(npc)) return;
+
         wanderingNPCs.remove(npc.getIndex());
         npcLocations.remove(npc.getIndex());
-    }
-
-    // onNpcChanged is required for id listing to work when npc is changing id but name remain the same
-    // Example: npcs like phantom muspah have multiple ids but same static name
-    // so this applies and removes the text accordingly on npc id change if in list
-    @Subscribe
-    public void onNpcChanged(NpcChanged e) {
-        final NPC npc = e.getNpc();
-
-        if (isNpcInList(npc)) {
-            wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
-            npcLocations.put(npc.getIndex(), npc.getWorldLocation());
-        } else {
-            wanderingNPCs.remove(npc.getIndex());
-            npcLocations.remove(npc.getIndex());
-        }
     }
 
     @Subscribe
@@ -119,6 +102,31 @@ public class MonsterHPPlugin extends Plugin {
                 gameStateChanged.getGameState() == GameState.HOPPING) {
             wanderingNPCs.clear();
             npcLocations.clear();
+        }
+    }
+
+    // onNpcChanged is mostly required for id listing to work when npc is changing id but name remain the same
+    // Example: npcs like phantom muspah have multiple ids(transitions) but same static name
+    // so this applies and removes the text accordingly on npc id change if in list
+    @Subscribe
+    public void onNpcChanged(NpcChanged e) {
+        final NPC npc = e.getNpc();
+
+        // Duke Sucellus have no onNpcDespawned when dying but fires sometimes on instance leaving if npc is not dead but in 12167 state... (jagex?)
+        // So we have to do this special little step
+        if (npc.getId() == NpcID.DUKE_SUCELLUS_12192 || npc.getId() == NpcID.DUKE_SUCELLUS_12196) // Duke "dead" ids
+        {
+            wanderingNPCs.remove(npc.getIndex());
+            npcLocations.remove(npc.getIndex());
+        }
+
+        // Actual method
+        if (isNpcInList(npc)) {
+            wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
+            npcLocations.put(npc.getIndex(), npc.getWorldLocation());
+        } else {
+            wanderingNPCs.remove(npc.getIndex());
+            npcLocations.remove(npc.getIndex());
         }
     }
 
@@ -140,11 +148,9 @@ public class MonsterHPPlugin extends Plugin {
 
             final WanderingNPC wnpc = wanderingNPCs.get(npc.getIndex());
 
-            if (wnpc == null) {
-                continue;
+            if (wnpc != null) {
+                updateWnpcProperties(npc, wnpc, locationCount);
             }
-
-            updateWnpcProperties(npc, wnpc, locationCount);
         }
     }
 
@@ -173,7 +179,15 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private boolean isNpcNameInList(String npcName) {
-        return (npcName != null && selectedNpcs.contains(npcName.toLowerCase()));
+        if (npcName == null) {
+            return false;
+        }
+
+        String lowerCaseNpcName = npcName.toLowerCase();
+
+        // Check for exact match or wildcard match that checks if the name ends with "*" and matches the prefix
+        return selectedNpcs.contains(lowerCaseNpcName) || selectedNpcs.stream()
+                .anyMatch(name -> name.endsWith("*") && lowerCaseNpcName.startsWith(name.substring(0, name.length() - 1)));
     }
 
     private boolean isNpcIdInList(int npcId) {
@@ -182,6 +196,8 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private boolean isNpcInList(NPC npc) {
+        if (isNpcIdBlacklisted(npc)) return false;
+
         boolean isInList = (isNpcNameInList(npc.getName()) || isNpcIdInList(npc.getId()));
 
         if (!isInList) {
@@ -233,9 +249,19 @@ public class MonsterHPPlugin extends Plugin {
 
         for (NPC npc : client.getNpcs()) {
             if (isNpcInList(npc)) {
-                wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
+                wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
                 npcLocations.put(npc.getIndex(), npc.getWorldLocation());
             }
         }
+    }
+
+    public boolean isNpcIdBlacklisted(NPC npc) {
+        String npcName = npc.getName();
+        if (npcName != null && npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
+            int id = npc.getId();
+            return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167; // fight id & pre fight id
+        }
+
+        return false;
     }
 }
