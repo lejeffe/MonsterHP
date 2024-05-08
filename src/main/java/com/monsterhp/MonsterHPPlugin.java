@@ -17,11 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.NpcID;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.NpcDespawned;
-import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -44,14 +42,15 @@ public class MonsterHPPlugin extends Plugin {
     @Inject
     private OverlayManager overlayManager;
 
-
     @Inject
     private MonsterHPOverlay monsterhpoverlay;
 
     @Getter(AccessLevel.PACKAGE)
     private final Map<Integer, WanderingNPC> wanderingNPCs = new HashMap<>();
 
-    private List<String> selectedNPCs = new ArrayList<>();
+    private List<String> selectedNpcs = new ArrayList<>();
+
+    private List<String> selectedNpcIDs = new ArrayList<>();
 
     private boolean npcShowAll = true;
 
@@ -65,7 +64,8 @@ public class MonsterHPPlugin extends Plugin {
     @Override
     protected void startUp() throws Exception {
         overlayManager.add(monsterhpoverlay);
-        selectedNPCs = getSelectedNPCs();
+        selectedNpcs = getSelectedNpcNames();
+        selectedNpcIDs = getSelectedNpcIds();
         this.npcShowAll = config.npcShowAll();
         rebuildAllNpcs();
     }
@@ -80,19 +80,18 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onNpcSpawned(NpcSpawned npcSpawned) {
         final NPC npc = npcSpawned.getNpc();
-        final String npcName = npc.getName();
-        final int npcId = npc.getId();
+        if (!isNpcInList(npc)) return;
 
-        if (checkNPCName(npcName)) return;
-
-
-        wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
+        wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
         npcLocations.put(npc.getIndex(), npc.getWorldLocation());
     }
 
     @Subscribe
     public void onNpcDespawned(NpcDespawned npcDespawned) {
         final NPC npc = npcDespawned.getNpc();
+
+        if (npc == null || !isNpcInList(npc)) return;
+
         wanderingNPCs.remove(npc.getIndex());
         npcLocations.remove(npc.getIndex());
     }
@@ -106,63 +105,113 @@ public class MonsterHPPlugin extends Plugin {
         }
     }
 
+    // onNpcChanged is mostly required for id listing to work when npc is changing id but name remain the same
+    // Example: npcs like phantom muspah have multiple ids(transitions) but same static name
+    // so this applies and removes the text accordingly on npc id change if in list
+    @Subscribe
+    public void onNpcChanged(NpcChanged e) {
+        final NPC npc = e.getNpc();
+
+        // Duke Sucellus have no onNpcDespawned when dying but fires sometimes on instance leaving if npc is not dead but in 12167 state... (jagex?)
+        // So we have to do this special little step
+        if (npc.getId() == NpcID.DUKE_SUCELLUS_12192 || npc.getId() == NpcID.DUKE_SUCELLUS_12196) // Duke "dead" ids
+        {
+            wanderingNPCs.remove(npc.getIndex());
+            npcLocations.remove(npc.getIndex());
+        }
+
+        // Actual method
+        if (isNpcInList(npc)) {
+            wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
+            npcLocations.put(npc.getIndex(), npc.getWorldLocation());
+        } else {
+            wanderingNPCs.remove(npc.getIndex());
+            npcLocations.remove(npc.getIndex());
+        }
+    }
+
     @Subscribe
     public void onGameTick(GameTick event) {
+        if (!config.showOverlay()) {
+            return;
+        }
+
         HashMap<WorldPoint, Integer> locationCount = new HashMap<>();
         for (WorldPoint location : npcLocations.values()) {
-            if (locationCount.containsKey(location)) {
-                locationCount.put(location, locationCount.get(location) + 1);
-            } else {
-                locationCount.put(location, 1);
-            }
+            locationCount.put(location, locationCount.getOrDefault(location, 0) + 1);
         }
+
         for (NPC npc : client.getNpcs()) {
-            final String npcName = npc.getName();
-            // refactored npc name check to its own method
-            if (checkNPCName(npcName)) continue;
+            if (!isNpcInList(npc)) {
+                continue;
+            }
 
             final WanderingNPC wnpc = wanderingNPCs.get(npc.getIndex());
 
-            if (wnpc == null) {
-                continue;
-            }
-            double monsterHP = 0;
-            if (config.showOverlay()) {
-                monsterHP = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
-                if (!npc.isDead()) {
-                    if ((npc.getHealthRatio() / npc.getHealthScale() != 1)) {
-                        wnpc.setHealthRatio(monsterHP);
-                        wnpc.setCurrentLocation(npc.getWorldLocation());
-                        wnpc.setDead(false);
-                        if (locationCount.containsKey(wnpc.getCurrentLocation())) {
-                            wnpc.setOffset(locationCount.get(wnpc.getCurrentLocation()) - 1);
-                            locationCount.put(wnpc.getCurrentLocation(), locationCount.get(wnpc.getCurrentLocation()) - 1);
-                        }
-                    }
-                } else if (npc.isDead()) {
-                    wnpc.setHealthRatio(0);
-                    if (config.hideDeath()) {
-                        wnpc.setDead(true);
-                    }
-                }
-
-                npcLocations.put(wnpc.getNpcIndex(), wnpc.getCurrentLocation());
+            if (wnpc != null) {
+                updateWnpcProperties(npc, wnpc, locationCount);
             }
         }
     }
 
-    private boolean checkNPCName(String npcName) {
-        if (npcName == null || !selectedNPCs.contains(npcName.toLowerCase())) {
-            // only care about names if we are not applying to all NPCs
-            return !this.npcShowAll;
+    private void updateWnpcProperties(NPC npc, WanderingNPC wnpc, Map<WorldPoint, Integer> locationCount) {
+        double monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
+
+        if (!npc.isDead() && npc.getHealthRatio() / npc.getHealthScale() != 1) {
+            wnpc.setHealthRatio(monsterHp);
+            wnpc.setCurrentLocation(npc.getWorldLocation());
+            wnpc.setDead(false);
+
+            WorldPoint currentLocation = wnpc.getCurrentLocation();
+
+            if (locationCount.containsKey(currentLocation)) {
+                wnpc.setOffset(locationCount.get(currentLocation) - 1);
+                locationCount.put(currentLocation, locationCount.get(currentLocation) - 1);
+            }
+        } else if (npc.isDead()) {
+            wnpc.setHealthRatio(0);
+            if (config.hideDeath()) {
+                wnpc.setDead(true);
+            }
         }
-        return false;
+
+        npcLocations.put(wnpc.getNpcIndex(), wnpc.getCurrentLocation());
+    }
+
+    private boolean isNpcNameInList(String npcName) {
+        if (npcName == null) {
+            return false;
+        }
+
+        String lowerCaseNpcName = npcName.toLowerCase();
+
+        // Check for exact match or wildcard match that checks if the name ends with "*" and matches the prefix
+        return selectedNpcs.contains(lowerCaseNpcName) || selectedNpcs.stream()
+                .anyMatch(name -> name.endsWith("*") && lowerCaseNpcName.startsWith(name.substring(0, name.length() - 1)));
+    }
+
+    private boolean isNpcIdInList(int npcId) {
+        String npcIdString = String.valueOf(npcId);
+        return selectedNpcIDs.contains(npcIdString);
+    }
+
+    private boolean isNpcInList(NPC npc) {
+        if (isNpcIdBlacklisted(npc)) return false;
+
+        boolean isInList = (isNpcNameInList(npc.getName()) || isNpcIdInList(npc.getId()));
+
+        if (!isInList) {
+            return this.npcShowAll;
+        }
+
+        return true;
     }
 
     @Subscribe
     public void onConfigChanged(ConfigChanged configChanged) {
-        if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcToShowHp"))) {
-            selectedNPCs = getSelectedNPCs();
+        if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcToShowHp") || Objects.equals(configChanged.getKey(), "npcIdToShowHp"))) {
+            selectedNpcs = getSelectedNpcNames();
+            selectedNpcIDs = getSelectedNpcIds();
 
             this.npcShowAll = config.npcShowAll();
             rebuildAllNpcs();
@@ -170,13 +219,23 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     @VisibleForTesting
-    List<String> getSelectedNPCs() {
+    List<String> getSelectedNpcNames() {
         String configNPCs = config.npcToShowHp().toLowerCase();
         if (configNPCs.isEmpty()) {
             return Collections.emptyList();
         }
 
         return Text.fromCSV(configNPCs);
+    }
+
+    @VisibleForTesting
+    List<String> getSelectedNpcIds() {
+        String configNPCIDs = config.npcIdToShowHp().toLowerCase();
+        if (configNPCIDs.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return Text.fromCSV(configNPCIDs);
     }
 
     private void rebuildAllNpcs() {
@@ -189,12 +248,20 @@ public class MonsterHPPlugin extends Plugin {
         }
 
         for (NPC npc : client.getNpcs()) {
-            final String npcName = npc.getName();
-            // refactored npc name check to its own method
-            if (checkNPCName(npcName)) continue;
-
-            wanderingNPCs.putIfAbsent(npc.getIndex(), new WanderingNPC(npc));
-            npcLocations.put(npc.getIndex(), npc.getWorldLocation());
+            if (isNpcInList(npc)) {
+                wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
+                npcLocations.put(npc.getIndex(), npc.getWorldLocation());
+            }
         }
+    }
+
+    public boolean isNpcIdBlacklisted(NPC npc) {
+        String npcName = npc.getName();
+        if (npcName != null && npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
+            int id = npc.getId();
+            return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167; // fight id & pre fight id
+        }
+
+        return false;
     }
 }
