@@ -259,7 +259,7 @@ public class MonsterHPPlugin extends Plugin {
         String npcName = npc.getName();
         if (npcName != null && npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
             int id = npc.getId();
-            return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167; // fight id & pre fight id
+            return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167;
         }
 
         return false;
