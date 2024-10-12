@@ -3,7 +3,6 @@ package com.monsterhp;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.NPC;
-import net.runelite.api.NPCComposition;
 import net.runelite.api.coords.WorldPoint;
 
 public class WanderingNPC {
@@ -33,6 +32,10 @@ public class WanderingNPC {
 
     @Getter
     @Setter
+    private double healthScale;
+
+    @Getter
+    @Setter
     private boolean isDead;
 
     @Getter
@@ -48,6 +51,7 @@ public class WanderingNPC {
         this.currentLocation = npc.getWorldLocation();
         this.currentHp = 100;
         this.healthRatio = 100;
+        this.healthScale = npc.getHealthScale();
         this.isDead = false;
         this.offset = 0;
     }

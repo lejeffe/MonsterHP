@@ -2,11 +2,10 @@ package com.monsterhp;
 
 import java.awt.Color;
 
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.ConfigSection;
-import net.runelite.client.config.Range;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+import net.runelite.client.config.*;
 
 @ConfigGroup("MonsterHP")
 public interface MonsterHPConfig extends Config {
@@ -24,6 +23,24 @@ public interface MonsterHPConfig extends Config {
 
         public String getName() {
             return name;
+        }
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    enum Background
+    {
+        OFF("Off"),
+        SHADOW("Shadow"),
+        OUTLINE("Outline");
+
+        @Getter
+        private final String group;
+
+        @Override
+        public String toString()
+        {
+            return group;
         }
     }
 
@@ -95,6 +112,7 @@ public interface MonsterHPConfig extends Config {
         return false;
     }
 
+    @Alpha
     @Range(
             max = 300
     )
@@ -130,7 +148,7 @@ public interface MonsterHPConfig extends Config {
     default int lowHPThreshold() {
         return 25;
     }
-
+    @Alpha
     @ConfigItem(
             position = 8,
             keyName = "lowHPColor",
@@ -226,7 +244,7 @@ public interface MonsterHPConfig extends Config {
     @ConfigItem(
             position = 16,
             keyName = "fontStyle",
-            name = "Font style",
+            name = "Style",
             description = "Style of the font to use for the hp shown. Only works with custom font.",
             section = font_settings
     )
@@ -237,7 +255,7 @@ public interface MonsterHPConfig extends Config {
     @ConfigItem(
             position = 17,
             keyName = "fontSize",
-            name = "Font size",
+            name = "Size",
             description = "Size of the font to use for hp text. Only works with custom font.",
             section = font_settings
     )
@@ -249,10 +267,98 @@ public interface MonsterHPConfig extends Config {
             position = 18,
             keyName = "numericHealth",
             name = "Numeric Health",
-            description = "Show the numeric health of the monster instead of precentage.",
+            description = "Show the numeric health of the monster instead of percentage. (Not all npcs supports this)",
             section = hp_settings
     )
     default boolean numericHealth() {
         return false;
+    }
+
+    @ConfigItem(
+            position = 19,
+            name = "Background",
+            keyName = "fontBackground",
+            description = "Background of the HP text",
+            section = font_settings
+    )
+    default Background fontBackground()
+    {
+        return Background.SHADOW;
+    }
+
+    @Range(
+            min = 1,
+            max = 100
+    )
+    @ConfigItem(
+            position = 20,
+            keyName = "fontShadowSize",
+            name = "Shadow size",
+            description = "Offset of the shadow drawn, requires font backgrounds.",
+            section = font_settings
+    )
+    default int fontShadowSize() {
+        return 1;
+    }
+
+    @Range(
+            min = 1,
+            max = 100
+    )
+    @ConfigItem(
+            position = 21,
+            keyName = "fontOutlineSize",
+            name = "Outline size",
+            description = "Size of the outline drawn, requires font backgrounds.",
+            section = font_settings
+    )
+    default int fontOutlineSize() {
+        return 4;
+    }
+    @Alpha
+    @ConfigItem(
+            position = 22,
+            keyName = "fontOutlineColor",
+            name = "Outline color",
+            description = "Choose the color for the text outline",
+            section = font_settings
+    )
+    default Color fontOutlineColor() {
+        return Color.BLACK;
+    }
+
+    @ConfigItem(
+            position = 23,
+            keyName = "gradientHP",
+            name = "Gradient HP",
+            description = "HP will be gradient from color preset A to B depending on the percentage. (Overwrites low HP threshold setting)",
+            section = hp_settings
+    )
+    default boolean useGradientHP() {
+        return true;
+    }
+
+    @Alpha
+    @ConfigItem(
+            position = 24,
+            keyName = "gradientHPColorA",
+            name = "Gradient color A",
+            description = "Choose the color for gradient A",
+            section = hp_settings
+    )
+    default Color gradientHPColorA() {
+        return Color.GREEN;
+    }
+
+    @Alpha
+    @ConfigItem(
+            position = 25,
+            keyName = "gradientHPColorB",
+            name = "Gradient color B",
+            description = "Choose the color for gradient B",
+            section = hp_settings
+    )
+    default Color gradientHPColorB() {
+        return Color.RED;
     }
 }

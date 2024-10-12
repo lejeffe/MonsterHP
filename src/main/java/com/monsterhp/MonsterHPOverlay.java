@@ -1,15 +1,14 @@
 package com.monsterhp;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
+import java.awt.font.TextLayout;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.inject.Inject;
+import java.util.ArrayList;
 
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NPC;
 import net.runelite.api.NpcID;
 import net.runelite.api.Point;
 import net.runelite.client.game.NPCManager;
@@ -17,7 +16,6 @@ import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayUtil;
 
 @Slf4j
 public class MonsterHPOverlay extends Overlay {
@@ -62,6 +60,8 @@ public class MonsterHPOverlay extends Overlay {
                 if (config.npcHideFull() && npc.getHealthRatio() == 100) return;
                 renderTimer(npc, graphics);
             });
+            ArrayList<NPC> stackedNpcs = new ArrayList<>();
+            plugin.getWanderingNPCs().forEach((id, npc) -> renderTimer(npc, graphics, stackedNpcs));
         }
         return null;
     }
@@ -87,28 +87,31 @@ public class MonsterHPOverlay extends Overlay {
     }
 
 
-    private void renderTimer(final WanderingNPC npc, final Graphics2D graphics) {
+    private void renderTimer(final WanderingNPC npc, final Graphics2D graphics, ArrayList<NPC> stackedNpcs) {
         if (npc.isDead()) {
             return;
         }
-        
+
+        // Skip npc with full hp if enabled
+        if (config.npcHideFull() && npc.getHealthRatio() == 100) return;
+
+        // Get max health through NPC manager, returns null if not found
+        Integer maxHealth = npcManager.getHealth(npc.getId());
+
+        // Some npcs return null when using npcManager as they seem to not be added with all details to static.runelite.net?
+        // i assume because health mimic mechanics like Duke Sucellus poison wakeup that has a 200 fake health before fight id
+        // https://github.com/runelite/static.runelite.net/blob/gh-pages/npcs/npcs.json
+        if (npc.getNpcName().equals("Duke Sucellus")) {
+            if (npc.getId() == NpcID.DUKE_SUCELLUS_12191) { // Duke Sucellus - fight id
+                maxHealth = 440; // we assume its health is 440
+            }
+            if (npc.getId() == NpcID.DUKE_SUCELLUS_12167) { // Duke Sucellus - pre fight id
+                maxHealth = 200; // we assume its 'poison' health is 200
+            }
+        }
+
         // Use Numeric health
         if (config.numericHealth()) {
-
-            Integer maxHealth = npcManager.getHealth(npc.getId());
-
-            // Some npcs return null when using npcManager as they seem to not be added with all details to static.runelite.net?
-            // i assume because health mimic mechanics like Duke Sucellus poison wakeup that has a 200 fake health before fight id
-            // https://github.com/runelite/static.runelite.net/blob/gh-pages/npcs/npcs.json
-            if (npc.getNpcName().equals("Duke Sucellus")) {
-                if (npc.getId() == NpcID.DUKE_SUCELLUS_12191) { // Duke Sucellus - fight id
-                    maxHealth = 440; // we assume its health is 440
-                }
-                if (npc.getId() == NpcID.DUKE_SUCELLUS_12167) { // Duke Sucellus - pre fight id
-                    maxHealth = 200; // we assume its 'poison' health is 200
-                }
-            }
-
             if (maxHealth != null) {
                 // Use the current health ratio and round it according to monsters max hp
                 double numericHealth = (int) Math.floor((npc.getHealthRatio() / 100) * maxHealth);
@@ -123,25 +126,62 @@ public class MonsterHPOverlay extends Overlay {
             timerColor = config.lowHPColor();
         }
 
+        if (config.useGradientHP()) {
+            if (maxHealth != null) {
+                int curNumericHealth = (int) Math.floor((npc.getHealthRatio() / 100) * maxHealth);
+                timerColor = getGradientHpColor(curNumericHealth, maxHealth);
+            } else { // Try percentage based gradient hp - happens if npcManager can't get numeric health.
+                int curNumericHealth = (int) Math.floor(npc.getHealthRatio());
+                timerColor = getGradientHpColor(curNumericHealth, 100);
+            }
+        }
+
         String currentHPString = getCurrentHpString(npc);
 
-        Point canvasPoint;
-        if (config.aboveHPBar()) {
-            canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
-        } else {
-            canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, config.HPHeight());
-        }
-
-        if (canvasPoint == null) {
-            return;
-        }
-
         if (config.stackHp()) {
-            int offSet = (int) (npc.getOffset() * config.fontSize() * 0.85);
-            Point stackOffset = new Point(canvasPoint.getX(), canvasPoint.getY() + offSet);
-            OverlayUtil.renderTextLocation(graphics, stackOffset, currentHPString, timerColor);
+            /*
+            * Stack method created by github.com/MoreBuchus in his tzhaar-hp-tracker plugin
+            * i Xines just modified this method to work with Monster HP plugin.
+            * So credits goes to Buchus for the method.
+            */
+
+            int offset = 0;
+            NPC firstStack = null;
+            for (NPC sNpc : stackedNpcs)
+            {
+                if (sNpc.getWorldLocation().getX() == npc.getNpc().getWorldLocation().getX() && sNpc.getWorldLocation().getY() == npc.getNpc().getWorldLocation().getY())
+                {
+                    if (firstStack == null)
+                    {
+                        firstStack = npc.getNpc();
+                    }
+                    offset += graphics.getFontMetrics().getHeight();
+                }
+            }
+
+            int zOffset = config.HPHeight();
+            if (config.aboveHPBar()) {
+                zOffset += npc.getNpc().getLogicalHeight();
+            }
+
+            stackedNpcs.add(npc.getNpc());
+
+            Point textLocation = offset > 0 ? firstStack.getCanvasTextLocation(graphics, currentHPString, zOffset) : npc.getNpc().getCanvasTextLocation(graphics, currentHPString, zOffset);
+            if (textLocation != null) {
+                Point stackOffset = new Point(textLocation.getX(), textLocation.getY() - offset);
+                handleText(graphics, stackOffset, currentHPString, timerColor);
+            }
         } else {
-            OverlayUtil.renderTextLocation(graphics, canvasPoint, currentHPString, timerColor);
+            Point canvasPoint;
+            if (config.aboveHPBar()) {
+                canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, npc.getNpc().getLogicalHeight() + config.HPHeight());
+            } else {
+                canvasPoint = npc.getNpc().getCanvasTextLocation(graphics, currentHPString, config.HPHeight());
+            }
+
+            if (canvasPoint != null) {
+                handleText(graphics, canvasPoint, currentHPString, timerColor);
+            }
         }
     }
 
@@ -155,7 +195,7 @@ public class MonsterHPOverlay extends Overlay {
             lastFontStyle = config.fontStyle();
 
             //use runescape font as default
-            if (config.fontName().equals("") || config.customFont() == false) {
+            if (config.fontName().equals("") || !config.customFont()) {
                 if (config.fontSize() < 16) {
                     font = FontManager.getRunescapeSmallFont();
                 } else if (config.fontStyle() == MonsterHPConfig.FontStyle.BOLD || config.fontStyle() == MonsterHPConfig.FontStyle.BOLD_ITALICS) {
@@ -198,5 +238,89 @@ public class MonsterHPOverlay extends Overlay {
             font = new Font(config.fontName(), style, config.fontSize());
             useRunescapeFont = false;
         }
+    }
+
+    private void handleText(Graphics2D graphics, Point textLoc, String text, Color color)
+    {
+        switch (config.fontBackground())
+        {
+            case OUTLINE:
+            {
+                // Create a new Graphics2D instance to avoid modifying the original one
+                Graphics2D g2d = (Graphics2D) graphics.create();
+
+                // Enable antialiasing for smoother text (just to be sure)
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Translate the graphics
+                g2d.translate(textLoc.getX(), textLoc.getY());
+
+                // Set outline color
+                g2d.setColor(config.fontOutlineColor());
+
+                // Text layout
+                TextLayout tl = new TextLayout(text, graphics.getFont(), g2d.getFontRenderContext());
+
+                // Get the outline shape
+                Shape shape = tl.getOutline(null);
+
+                // Set outline thickness and try to prevent artifacts on sharp angles
+                g2d.setStroke(new BasicStroke((float) config.fontOutlineSize(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+                // Draw the outline
+                g2d.draw(shape);
+
+                // Set fill color
+                g2d.setColor(color);
+
+                // Fill the shape
+                g2d.fill(shape);
+
+                // Dispose of the temporary Graphics2D instance
+                g2d.dispose();
+
+                break;
+            }
+            case SHADOW:
+            {
+                int offsetShadow = config.fontShadowSize();
+
+                graphics.setColor(new Color(0,0,0, color.getAlpha()));
+                graphics.drawString(text, textLoc.getX() + offsetShadow, textLoc.getY() + offsetShadow);
+                graphics.setColor(color);
+                graphics.drawString(text, textLoc.getX(), textLoc.getY());
+                break;
+            }
+            case OFF:
+                // Mini shadow
+                graphics.setColor(new Color(0,0,0, color.getAlpha()));
+                graphics.drawString(text, textLoc.getX() + 1, textLoc.getY() + 1);
+
+                // Draw string (renderTextLocation does not support alpha coloring or is broken...)
+                graphics.setColor(color);
+                graphics.drawString(text, textLoc.getX(), textLoc.getY());
+                break;
+            default:
+                break;
+        }
+    }
+
+    private Color getGradientHpColor(int currentHealth, int maxHealth) {
+        // Ensure currentHealth is between 0 and maxHealth
+        currentHealth = Math.min(maxHealth, Math.max(0, currentHealth));
+
+        // Calculate the health percentage
+        double healthPercentage = (double) currentHealth / maxHealth;
+
+        // Get config RGB values
+        Color colorA = config.gradientHPColorA();
+        Color colorB = config.gradientHPColorB();
+
+        // Calculate the gradient depending on percentage and RGB values
+        int red = (int) (colorB.getRed() + (colorA.getRed() - colorB.getRed()) * healthPercentage);
+        int green = (int) (colorB.getGreen() + (colorA.getGreen() - colorB.getGreen()) * healthPercentage);
+        int blue = (int) (colorB.getBlue() + (colorA.getBlue() - colorB.getBlue()) * healthPercentage);
+
+        return new Color(red, green, blue);
     }
 }
