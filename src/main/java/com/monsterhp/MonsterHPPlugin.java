@@ -14,10 +14,7 @@ import javax.inject.Inject;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.NPC;
-import net.runelite.api.NpcID;
+import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
 import net.runelite.client.config.ConfigManager;
@@ -50,6 +47,8 @@ public class MonsterHPPlugin extends Plugin {
 
     private List<String> selectedNpcs = new ArrayList<>();
 
+    private List<String> selectedNpcsWithTypes = new ArrayList<>();
+
     private List<String> selectedNpcIDs = new ArrayList<>();
 
     private boolean npcShowAll = true;
@@ -64,7 +63,8 @@ public class MonsterHPPlugin extends Plugin {
     @Override
     protected void startUp() throws Exception {
         overlayManager.add(monsterhpoverlay);
-        selectedNpcs = getSelectedNpcNames();
+        selectedNpcs = getSelectedNpcNames(false);
+        selectedNpcsWithTypes = getSelectedNpcNames(true);
         selectedNpcIDs = getSelectedNpcIds();
         this.npcShowAll = config.npcShowAll();
         rebuildAllNpcs();
@@ -82,7 +82,12 @@ public class MonsterHPPlugin extends Plugin {
         final NPC npc = npcSpawned.getNpc();
         if (!isNpcInList(npc)) return;
 
-        wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
+        WanderingNPC wnpc = new WanderingNPC(npc);
+
+        if (isNpcNumericDefined(npc))
+            wnpc.setIsTypeNumeric(1);
+
+        wanderingNPCs.put(npc.getIndex(), wnpc);
         npcLocations.put(npc.getIndex(), npc.getWorldLocation());
     }
 
@@ -210,7 +215,8 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onConfigChanged(ConfigChanged configChanged) {
         if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcToShowHp") || Objects.equals(configChanged.getKey(), "npcIdToShowHp"))) {
-            selectedNpcs = getSelectedNpcNames();
+            selectedNpcs = getSelectedNpcNames(false);
+            selectedNpcsWithTypes = getSelectedNpcNames(true);
             selectedNpcIDs = getSelectedNpcIds();
 
             this.npcShowAll = config.npcShowAll();
@@ -219,13 +225,26 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     @VisibleForTesting
-    List<String> getSelectedNpcNames() {
+    List<String> getSelectedNpcNames(boolean includeDisplaytype) {
         String configNPCs = config.npcToShowHp().toLowerCase();
         if (configNPCs.isEmpty()) {
             return Collections.emptyList();
         }
 
-        return Text.fromCSV(configNPCs);
+        // "Raw" contains the comma-separated RAW text, so it has ":n" in their names
+        List<String> selectedNpcNamesRaw = Text.fromCSV(configNPCs);
+
+        // If false, remove all display types from the string to create a list of only the NPC names
+        if (!includeDisplaytype) {
+            List<String> strippedNpcNames = new ArrayList<>(selectedNpcNamesRaw);
+
+            // Strips the ":n" suffix from each name if present
+            strippedNpcNames.replaceAll(npcName -> npcName != null && npcName.contains(":") ? npcName.split(":")[0] : npcName);
+
+            return strippedNpcNames;
+        }
+
+        return selectedNpcNamesRaw;
     }
 
     @VisibleForTesting
@@ -236,6 +255,30 @@ public class MonsterHPPlugin extends Plugin {
         }
 
         return Text.fromCSV(configNPCIDs);
+    }
+
+    @VisibleForTesting
+    boolean isNpcNumericDefined(NPC npc) {
+        String npcNameTargetLowerCase = Objects.requireNonNull(npc.getName()).toLowerCase();
+
+        for (String npcNameRaw : selectedNpcsWithTypes) {
+            String npcName = npcNameRaw.contains(":") ? npcNameRaw.split(":")[0] : npcNameRaw;
+            String lowerCaseNpcName = npcName.toLowerCase();
+
+            // Check for wildcard match only if npcName ends with "*"
+            boolean isMatch = false;
+            if (lowerCaseNpcName.endsWith("*")) {
+                int matchLength = lowerCaseNpcName.length() - 1; // exclude the '*'
+                isMatch = matchLength <= npcNameTargetLowerCase.length() &&
+                        npcNameTargetLowerCase.startsWith(lowerCaseNpcName.substring(0, matchLength));
+            }
+
+            // Check for exact or wildcard match with ":n" suffix
+            if (npcNameRaw.contains(":n") && (npcNameTargetLowerCase.equals(lowerCaseNpcName) || isMatch)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void rebuildAllNpcs() {
@@ -249,7 +292,12 @@ public class MonsterHPPlugin extends Plugin {
 
         for (NPC npc : client.getNpcs()) {
             if (isNpcInList(npc)) {
-                wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
+                WanderingNPC wnpc = new WanderingNPC(npc);
+
+                if (isNpcNumericDefined(npc))
+                    wnpc.setIsTypeNumeric(1);
+
+                wanderingNPCs.put(npc.getIndex(), wnpc);
                 npcLocations.put(npc.getIndex(), npc.getWorldLocation());
             }
         }
