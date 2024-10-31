@@ -35,6 +35,7 @@ public class MonsterHPOverlay extends Overlay {
 
     @Inject
     MonsterHPOverlay(MonsterHPPlugin plugin, MonsterHPConfig config, NPCManager npcManager) {
+        setPriority(0.75f);
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
         this.plugin = plugin;
@@ -64,7 +65,7 @@ public class MonsterHPOverlay extends Overlay {
 
     private String getCurrentHpString(WanderingNPC npc) {
         String currentHPString;
-        if (config.numericHealth()) {
+        if (config.numericHealth() || npc.getIsTypeNumeric() == 1) {
             currentHPString = String.valueOf((int) npc.getCurrentHp());
         } else {
             switch (config.decimalHp()) {
@@ -84,7 +85,7 @@ public class MonsterHPOverlay extends Overlay {
 
 
     private void renderTimer(final WanderingNPC npc, final Graphics2D graphics, ArrayList<NPC> stackedNpcs) {
-        if (npc.isDead()) {
+        if (npc == null || npc.isDead()) {
             return;
         }
 
@@ -107,7 +108,7 @@ public class MonsterHPOverlay extends Overlay {
         }
 
         // Use Numeric health
-        if (config.numericHealth()) {
+        if (config.numericHealth() || npc.getIsTypeNumeric() == 1) {
             if (maxHealth != null) {
                 // Use the current health ratio and round it according to monsters max hp
                 double numericHealth = (int) Math.floor((npc.getHealthRatio() / 100) * maxHealth);
