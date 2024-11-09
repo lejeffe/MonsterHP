@@ -24,6 +24,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
+import net.runelite.client.util.WildcardMatcher;
 
 @Slf4j
 @PluginDescriptor(
@@ -127,7 +128,12 @@ public class MonsterHPPlugin extends Plugin {
 
         // Actual method
         if (isNpcInList(npc)) {
-            wanderingNPCs.put(npc.getIndex(), new WanderingNPC(npc));
+            WanderingNPC wnpc = new WanderingNPC(npc);
+
+            if (isNpcNumericDefined(npc))
+                wnpc.setIsTypeNumeric(1);
+
+            wanderingNPCs.put(npc.getIndex(), wnpc);
             npcLocations.put(npc.getIndex(), npc.getWorldLocation());
         } else {
             wanderingNPCs.remove(npc.getIndex());
@@ -184,15 +190,9 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private boolean isNpcNameInList(String npcName) {
-        if (npcName == null) {
-            return false;
-        }
-
-        String lowerCaseNpcName = npcName.toLowerCase();
-
-        // Check for exact match or wildcard match that checks if the name ends with "*" and matches the prefix
-        return selectedNpcs.contains(lowerCaseNpcName) || selectedNpcs.stream()
-                .anyMatch(name -> name.endsWith("*") && lowerCaseNpcName.startsWith(name.substring(0, name.length() - 1)));
+        // Check for exact match or wildcard match
+        return npcName != null && (selectedNpcs.contains(npcName.toLowerCase()) ||
+                selectedNpcs.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, npcName)));
     }
 
     private boolean isNpcIdInList(int npcId) {
@@ -261,20 +261,12 @@ public class MonsterHPPlugin extends Plugin {
     boolean isNpcNumericDefined(NPC npc) {
         String npcNameTargetLowerCase = Objects.requireNonNull(npc.getName()).toLowerCase();
 
+        // Iterate over each entry in selectedNpcsWithTypes and use WildcardMatcher for matching
         for (String npcNameRaw : selectedNpcsWithTypes) {
             String npcName = npcNameRaw.contains(":") ? npcNameRaw.split(":")[0] : npcNameRaw;
-            String lowerCaseNpcName = npcName.toLowerCase();
+            boolean isMatch = WildcardMatcher.matches(npcName, npcNameTargetLowerCase);
 
-            // Check for wildcard match only if npcName ends with "*"
-            boolean isMatch = false;
-            if (lowerCaseNpcName.endsWith("*")) {
-                int matchLength = lowerCaseNpcName.length() - 1; // exclude the '*'
-                isMatch = matchLength <= npcNameTargetLowerCase.length() &&
-                        npcNameTargetLowerCase.startsWith(lowerCaseNpcName.substring(0, matchLength));
-            }
-
-            // Check for exact or wildcard match with ":n" suffix
-            if (npcNameRaw.contains(":n") && (npcNameTargetLowerCase.equals(lowerCaseNpcName) || isMatch)) {
+            if (npcNameRaw.contains(":n") && isMatch) {
                 return true;
             }
         }
