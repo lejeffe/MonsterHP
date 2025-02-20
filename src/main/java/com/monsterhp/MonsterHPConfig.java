@@ -103,6 +103,17 @@ public interface MonsterHPConfig extends Config {
 
     @ConfigItem(
             position = 4,
+            keyName = "npcShowAllBlacklist",
+            name = "Show all blacklist",
+            description = "blacklist npc names from show all option",
+            section = hp_settings
+    )
+    default String npcShowAllBlacklist() {
+        return "";
+    }
+
+    @ConfigItem(
+            position = 5,
             keyName = "npcHideFull",
             name = "Hide hp when full",
             description = "Hides the hp when the npc has not been damaged. Works nicely with the Show All option",
@@ -117,7 +128,7 @@ public interface MonsterHPConfig extends Config {
             max = 300
     )
     @ConfigItem(
-            position = 5,
+            position = 6,
             keyName = "normalHPColor",
             name = "Default hp overlay color",
             description = "Choose the color to be used on the hp",
@@ -128,7 +139,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 6,
+            position = 7,
             keyName = "useLowHP",
             name = "Use low HP threshold",
             description = "Configures whether or not you wish to use a 2nd color when the monster hp hits below the low hp threshold",
@@ -139,7 +150,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 7,
+            position = 8,
             keyName = "lowHPThreshold",
             name = "Low HP threshold",
             description = "Used to set the low HP threshold",
@@ -150,7 +161,7 @@ public interface MonsterHPConfig extends Config {
     }
     @Alpha
     @ConfigItem(
-            position = 8,
+            position = 9,
             keyName = "lowHPColor",
             name = "Overlay color Low HP",
             description = "Choose the color to be used when the hp of the npc is below the chosen hp threshold",
@@ -161,7 +172,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 9,
+            position = 10,
             keyName = "aboveHPBar",
             name = "Above HP bar",
             description = "Hp above the monsters hp bar, otherwise the Hp is show on the body of the NPC",
@@ -172,7 +183,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 10,
+            position = 11,
             keyName = "HPHeight",
             name = "Height of the HP",
             description = "Change the vertical offset of the HP above the npc body or the HP bar",
@@ -183,7 +194,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 11,
+            position = 12,
             keyName = "hideDeath",
             name = "Hide hp on death",
             description = "Hides the hp when the npc dies. Works nicely with the entity hider: Hide Dead NPCs option",
@@ -194,7 +205,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 12,
+            position = 13,
             keyName = "stackHp",
             name = "Stack monster HP",
             description = "Stacks the HP numbers on top of each other if multiple npc's are on the same tile",
@@ -209,7 +220,7 @@ public interface MonsterHPConfig extends Config {
             max = 2
     )
     @ConfigItem(
-            position = 13,
+            position = 14,
             keyName = "decimalHp",
             name = "Amount of decimals",
             description = "Show 0-2 decimals of precision, e.g. 13.33 instead of 13.",
@@ -220,7 +231,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 14,
+            position = 15,
             keyName = "customFont",
             name = "Enable custom fonts",
             description = "Enabling this setting makes it possible to use the custom font from the box below this",
@@ -231,7 +242,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 15,
+            position = 16,
             keyName = "fontName",
             name = "Font",
             description = "Name of the font to use for the hp shown. Leave blank to use RuneLite setting.",
@@ -242,7 +253,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 16,
+            position = 17,
             keyName = "fontStyle",
             name = "Style",
             description = "Style of the font to use for the hp shown. Only works with custom font.",
@@ -253,7 +264,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 17,
+            position = 18,
             keyName = "fontSize",
             name = "Size",
             description = "Size of the font to use for hp text. Only works with custom font.",
@@ -264,7 +275,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 18,
+            position = 19,
             keyName = "numericHealth",
             name = "Numeric Health",
             description = "Show the numeric health of the monster instead of percentage. (Not all npcs supports this)",
@@ -275,7 +286,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 19,
+            position = 20,
             name = "Background",
             keyName = "fontBackground",
             description = "Background of the HP text",
@@ -291,7 +302,7 @@ public interface MonsterHPConfig extends Config {
             max = 100
     )
     @ConfigItem(
-            position = 20,
+            position = 21,
             keyName = "fontShadowSize",
             name = "Shadow size",
             description = "Offset of the shadow drawn, requires font backgrounds.",
@@ -306,7 +317,7 @@ public interface MonsterHPConfig extends Config {
             max = 100
     )
     @ConfigItem(
-            position = 21,
+            position = 22,
             keyName = "fontOutlineSize",
             name = "Outline size",
             description = "Size of the outline drawn, requires font backgrounds.",
@@ -317,7 +328,7 @@ public interface MonsterHPConfig extends Config {
     }
     @Alpha
     @ConfigItem(
-            position = 22,
+            position = 23,
             keyName = "fontOutlineColor",
             name = "Outline color",
             description = "Choose the color for the text outline",
@@ -328,7 +339,7 @@ public interface MonsterHPConfig extends Config {
     }
 
     @ConfigItem(
-            position = 23,
+            position = 24,
             keyName = "gradientHP",
             name = "Gradient HP",
             description = "HP will be gradient from color preset A to B depending on the percentage. (Overwrites low HP threshold setting)",
@@ -340,7 +351,7 @@ public interface MonsterHPConfig extends Config {
 
     @Alpha
     @ConfigItem(
-            position = 24,
+            position = 25,
             keyName = "gradientHPColorA",
             name = "Gradient color A",
             description = "Choose the color for gradient A",
@@ -352,7 +363,7 @@ public interface MonsterHPConfig extends Config {
 
     @Alpha
     @ConfigItem(
-            position = 25,
+            position = 26,
             keyName = "gradientHPColorB",
             name = "Gradient color B",
             description = "Choose the color for gradient B",

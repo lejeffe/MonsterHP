@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -43,6 +44,9 @@ public class MonsterHPPlugin extends Plugin {
     @Inject
     private MonsterHPOverlay monsterhpoverlay;
 
+    @Inject
+    private ClientThread clientThread;
+
     @Getter(AccessLevel.PACKAGE)
     private final Map<Integer, WanderingNPC> wanderingNPCs = new HashMap<>();
 
@@ -51,6 +55,8 @@ public class MonsterHPPlugin extends Plugin {
     private List<String> selectedNpcsWithTypes = new ArrayList<>();
 
     private List<String> selectedNpcIDs = new ArrayList<>();
+
+    private List<String> npcShowAllBlacklist = new ArrayList<>();
 
     private boolean npcShowAll = true;
 
@@ -67,8 +73,11 @@ public class MonsterHPPlugin extends Plugin {
         selectedNpcs = getSelectedNpcNames(false);
         selectedNpcsWithTypes = getSelectedNpcNames(true);
         selectedNpcIDs = getSelectedNpcIds();
+
         this.npcShowAll = config.npcShowAll();
-        rebuildAllNpcs();
+        npcShowAllBlacklist = getShowAllBlacklistNames();
+
+        clientThread.invokeLater(this::rebuildAllNpcs);
     }
 
     @Override
@@ -152,7 +161,7 @@ public class MonsterHPPlugin extends Plugin {
             locationCount.put(location, locationCount.getOrDefault(location, 0) + 1);
         }
 
-        for (NPC npc : client.getNpcs()) {
+        for (NPC npc : client.getTopLevelWorldView().npcs()) {
             if (!isNpcInList(npc)) {
                 continue;
             }
@@ -189,6 +198,12 @@ public class MonsterHPPlugin extends Plugin {
         npcLocations.put(wnpc.getNpcIndex(), wnpc.getCurrentLocation());
     }
 
+    private boolean isNpcNameInShowAllBlacklist(String npcName) {
+        // Check for exact match or wildcard match
+        return npcName != null && (npcShowAllBlacklist.contains(npcName.toLowerCase()) ||
+                npcShowAllBlacklist.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, npcName)));
+    }
+
     private boolean isNpcNameInList(String npcName) {
         // Check for exact match or wildcard match
         return npcName != null && (selectedNpcs.contains(npcName.toLowerCase()) ||
@@ -206,7 +221,7 @@ public class MonsterHPPlugin extends Plugin {
         boolean isInList = (isNpcNameInList(npc.getName()) || isNpcIdInList(npc.getId()));
 
         if (!isInList) {
-            return this.npcShowAll;
+            return this.npcShowAll && !isNpcNameInShowAllBlacklist(npc.getName());
         }
 
         return true;
@@ -214,14 +229,21 @@ public class MonsterHPPlugin extends Plugin {
 
     @Subscribe
     public void onConfigChanged(ConfigChanged configChanged) {
-        if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcToShowHp") || Objects.equals(configChanged.getKey(), "npcIdToShowHp"))) {
+        if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcShowAllBlacklist") || Objects.equals(configChanged.getKey(), "npcToShowHp") || Objects.equals(configChanged.getKey(), "npcIdToShowHp"))) {
             selectedNpcs = getSelectedNpcNames(false);
             selectedNpcsWithTypes = getSelectedNpcNames(true);
             selectedNpcIDs = getSelectedNpcIds();
 
             this.npcShowAll = config.npcShowAll();
-            rebuildAllNpcs();
+            npcShowAllBlacklist = getShowAllBlacklistNames();
+
+            clientThread.invokeLater(this::rebuildAllNpcs);
         }
+    }
+
+    List<String> getShowAllBlacklistNames() {
+        String configNPCs = config.npcShowAllBlacklist().toLowerCase();
+        return configNPCs.isEmpty() ? Collections.emptyList() : Text.fromCSV(configNPCs);
     }
 
     @VisibleForTesting
@@ -282,7 +304,7 @@ public class MonsterHPPlugin extends Plugin {
             return;
         }
 
-        for (NPC npc : client.getNpcs()) {
+        for (NPC npc : client.getTopLevelWorldView().npcs()) {
             if (isNpcInList(npc)) {
                 WanderingNPC wnpc = new WanderingNPC(npc);
 
@@ -295,6 +317,7 @@ public class MonsterHPPlugin extends Plugin {
         }
     }
 
+    // Not to be confused with show all blacklist, this is for specific npc ids
     public boolean isNpcIdBlacklisted(NPC npc) {
         String npcName = npc.getName();
         if (npcName != null && npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
