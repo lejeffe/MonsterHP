@@ -8,8 +8,7 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.NPC;
-import net.runelite.api.NpcID;
+import net.runelite.api.*;
 import net.runelite.api.Point;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.ui.FontManager;
@@ -19,6 +18,9 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 
 @Slf4j
 public class MonsterHPOverlay extends Overlay {
+    @Inject
+    private Client client;
+
     private final MonsterHPPlugin plugin;
     private final MonsterHPConfig config;
 
@@ -63,24 +65,41 @@ public class MonsterHPOverlay extends Overlay {
         return null;
     }
 
-    private String getCurrentHpString(WanderingNPC npc) {
-        String currentHPString;
-        if (config.numericHealth() || npc.getIsTypeNumeric() == 1) {
-            currentHPString = String.valueOf((int) npc.getCurrentHp());
-        } else {
+    private String getCurrentHpString(WanderingNPC wnpc) {
+        boolean showNumericHealth = config.numericHealth() || wnpc.getIsTypeNumeric() == 1;
+        NPC npc = wnpc.getNpc();
+
+        // Numeric
+        if (showNumericHealth) {
+            String currentHPString;
+            if (BossUtil.isNpcBoss(npc)) {
+                final int currHp = client.getVarbitValue(Varbits.BOSS_HEALTH_CURRENT);
+                currentHPString = String.valueOf(currHp);
+            } else {
+                currentHPString = String.valueOf((int) wnpc.getCurrentHp());
+            }
+            return currentHPString;
+        } 
+
+        // Else try to use BOSS_HEALTH varbit from client to gather hp information
+        if (BossUtil.isNpcBoss(npc)) {
+            final int currHp = client.getVarbitValue(Varbits.BOSS_HEALTH_CURRENT);
+            final int maxHp = client.getVarbitValue(Varbits.BOSS_HEALTH_MAXIMUM);
+            double percent = maxHp > 0 ? 100.0 * currHp / maxHp : 0;
+
             switch (config.decimalHp()) {
-                case 1:
-                    currentHPString = String.valueOf(oneDecimalFormat.format(npc.getHealthRatio()));
-                    break;
-                case 2:
-                    currentHPString = String.valueOf(twoDecimalFormat.format(npc.getHealthRatio()));
-                    break;
-                default:
-                    currentHPString = String.valueOf(format.format(npc.getHealthRatio()));
-                    break;
+                case 1:  return String.valueOf(oneDecimalFormat.format(percent));
+                case 2:  return String.valueOf(twoDecimalFormat.format(percent));
+                default: return String.valueOf((percent >= 1) ? format.format(percent) : twoDecimalFormat.format(percent)); // Avoids display of 0 hp if npc is alive < 1 hp decimal
             }
         }
-        return currentHPString;
+
+        // Default ratio based
+        switch (config.decimalHp()) {
+            case 1:  return String.valueOf(oneDecimalFormat.format(wnpc.getHealthRatio()));
+            case 2:  return String.valueOf(twoDecimalFormat.format(wnpc.getHealthRatio()));
+            default: return String.valueOf(format.format(wnpc.getHealthRatio()));
+        }
     }
 
 
@@ -107,6 +126,12 @@ public class MonsterHPOverlay extends Overlay {
             }
         }
 
+        // Health fix for some bosses (that are not correctly set in npcManager)
+        if (BossUtil.isNpcBoss(npc.getNpc())) {
+            maxHealth = client.getVarbitValue(Varbits.BOSS_HEALTH_MAXIMUM);
+            if (maxHealth <= 0) return;
+        }
+
         // Use Numeric health
         if (config.numericHealth() || npc.getIsTypeNumeric() == 1) {
             if (maxHealth != null) {
@@ -127,7 +152,7 @@ public class MonsterHPOverlay extends Overlay {
             if (maxHealth != null) {
                 int curNumericHealth = (int) Math.floor((npc.getHealthRatio() / 100) * maxHealth);
                 timerColor = getGradientHpColor(curNumericHealth, maxHealth);
-            } else { // Try percentage based gradient hp - happens if npcManager can't get numeric health.
+            } else { // Try percentage based gradient hp - happens if npcManager can't get numeric max health.
                 int curNumericHealth = (int) Math.floor(npc.getHealthRatio());
                 timerColor = getGradientHpColor(curNumericHealth, 100);
             }
