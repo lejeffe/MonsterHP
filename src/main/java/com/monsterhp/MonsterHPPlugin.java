@@ -175,9 +175,25 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private void updateWnpcProperties(NPC npc, WanderingNPC wnpc, Map<WorldPoint, Integer> locationCount) {
-        double monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
+        double monsterHp;
 
-        if (!npc.isDead() && npc.getHealthRatio() / npc.getHealthScale() != 1) {
+        // Without a jagex health api we have to use duct tape fixes.
+        // Normally we'd just use getHealthRatio and getHealthScale, but for some NPCS like TOA raid bosses we have to use varbits
+        boolean isBoss = BossUtil.isNpcBoss(npc);
+        if (isBoss) {
+            final int curHp = client.getVarbitValue(Varbits.BOSS_HEALTH_CURRENT);
+            final int maxHp = client.getVarbitValue(Varbits.BOSS_HEALTH_MAXIMUM);
+            if (maxHp <= 0 || curHp <= 0) {
+                monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
+            } else {
+                monsterHp = 100.0 * curHp / maxHp;
+            }
+        } else {
+            // Runelite api npc actor method to calculate npc hp ratio
+            monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
+        }
+
+        if (!npc.isDead() && (npc.getHealthRatio() / npc.getHealthScale() != 1 || isBoss)) {
             wnpc.setHealthRatio(monsterHp);
             wnpc.setCurrentLocation(npc.getWorldLocation());
             wnpc.setDead(false);
@@ -320,9 +336,14 @@ public class MonsterHPPlugin extends Plugin {
     // Not to be confused with show all blacklist, this is for specific npc ids
     public boolean isNpcIdBlacklisted(NPC npc) {
         String npcName = npc.getName();
-        if (npcName != null && npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
+        if (npcName != null) {
             int id = npc.getId();
-            return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167;
+
+            if (npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
+                return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167;
+            } else if (npcName.equals("Akkha")) {
+                return id == NpcID.AKKHA; // Pre-enter room idle Akkha id 11789
+            }
         }
 
         return false;
