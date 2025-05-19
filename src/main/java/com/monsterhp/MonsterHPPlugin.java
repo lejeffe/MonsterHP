@@ -26,6 +26,8 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
 import net.runelite.client.util.WildcardMatcher;
+import static net.runelite.api.gameval.NpcID.*;
+import static net.runelite.api.gameval.VarbitID.*;
 
 @Slf4j
 @PluginDescriptor(
@@ -114,7 +116,7 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged) {
         if (gameStateChanged.getGameState() == GameState.LOGIN_SCREEN ||
-                gameStateChanged.getGameState() == GameState.HOPPING) {
+            gameStateChanged.getGameState() == GameState.HOPPING) {
             wanderingNPCs.clear();
             npcLocations.clear();
         }
@@ -126,13 +128,15 @@ public class MonsterHPPlugin extends Plugin {
     @Subscribe
     public void onNpcChanged(NpcChanged e) {
         final NPC npc = e.getNpc();
+        int id = npc.getId();
+        int idx = npc.getIndex();
 
-        // Duke Sucellus have no onNpcDespawned when dying but fires sometimes on instance leaving if npc is not dead but in 12167 state... (jagex?)
+        // Duke Sucellus have no onNpcDespawned when dying but fires sometimes on instance leaving if npc is not dead but in 12167(DUKE_SUCELLUS_ASLEEP) state...
         // So we have to do this special little step
-        if (npc.getId() == NpcID.DUKE_SUCELLUS_12192 || npc.getId() == NpcID.DUKE_SUCELLUS_12196) // Duke "dead" ids
+        if (id == DUKE_SUCELLUS_DEAD || id == DUKE_SUCELLUS_DEAD_QUEST)
         {
-            wanderingNPCs.remove(npc.getIndex());
-            npcLocations.remove(npc.getIndex());
+            wanderingNPCs.remove(idx);
+            npcLocations.remove(idx);
         }
 
         // Actual method
@@ -142,11 +146,11 @@ public class MonsterHPPlugin extends Plugin {
             if (isNpcNumericDefined(npc))
                 wnpc.setIsTypeNumeric(1);
 
-            wanderingNPCs.put(npc.getIndex(), wnpc);
-            npcLocations.put(npc.getIndex(), npc.getWorldLocation());
+            wanderingNPCs.put(idx, wnpc);
+            npcLocations.put(idx, npc.getWorldLocation());
         } else {
-            wanderingNPCs.remove(npc.getIndex());
-            npcLocations.remove(npc.getIndex());
+            wanderingNPCs.remove(idx);
+            npcLocations.remove(idx);
         }
     }
 
@@ -181,8 +185,8 @@ public class MonsterHPPlugin extends Plugin {
         // Normally we'd just use getHealthRatio and getHealthScale, but for some NPCS like TOA raid bosses we have to use varbits
         boolean isBoss = BossUtil.isNpcBoss(npc);
         if (isBoss) {
-            final int curHp = client.getVarbitValue(Varbits.BOSS_HEALTH_CURRENT);
-            final int maxHp = client.getVarbitValue(Varbits.BOSS_HEALTH_MAXIMUM);
+            final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
+            final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
             if (maxHp <= 0 || curHp <= 0) {
                 monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
             } else {
@@ -335,14 +339,17 @@ public class MonsterHPPlugin extends Plugin {
 
     // Not to be confused with show all blacklist, this is for specific npc ids
     public boolean isNpcIdBlacklisted(NPC npc) {
-        String npcName = npc.getName();
-        if (npcName != null) {
+        if (npc != null) {
+            String npcName = npc.getName();
             int id = npc.getId();
 
-            if (npcName.equals("Duke Sucellus")) { // duke sucellus - allow only fight id to be tracked from duke
-                return id != NpcID.DUKE_SUCELLUS_12191 && id != NpcID.DUKE_SUCELLUS_12167;
-            } else if (npcName.equals("Akkha")) {
-                return id == NpcID.AKKHA; // Pre-enter room idle Akkha id 11789
+            switch (npcName) {
+                case "Duke Sucellus": // duke sucellus - allow only fight id to be tracked from duke
+                    return id != DUKE_SUCELLUS_AWAKE && id != DUKE_SUCELLUS_ASLEEP; 
+                case "Akkha":
+                    return id == AKKHA_SPAWN; // Pre-enter room idle Akkha id 11789
+                default:
+                    return false;
             }
         }
 
