@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.Point;
+import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
@@ -68,39 +69,36 @@ public class MonsterHPOverlay extends Overlay {
     }
 
     private String getCurrentHpString(WanderingNPC wnpc) {
-        boolean showNumericHealth = config.numericHealth() || wnpc.getIsTypeNumeric() == 1;
+        boolean showNumericHealth = config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1;
         NPC npc = wnpc.getNpc();
 
         // Numeric
         if (showNumericHealth) {
-            String currentHPString;
+            String healthRatio = format.format(wnpc.getHealthRatio());
+
+            // getCurrentHp() returns numeric hp value if set, default is WanderingNpc value 100
+            boolean usePercentage = wnpc.getCurrentHp() == 100 && wnpc.getHealthRatio() < 100.0;
+
             if (BossUtil.isNpcBoss(npc)) {
-                final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
-                currentHPString = String.valueOf(curHp);
-            } else {
-                currentHPString = String.valueOf((int) wnpc.getCurrentHp());
-            }
-            return currentHPString;
-        } 
+                // Getting NPC HUD to get npc id and match with selected WNPC - probably not needed
+                int opponentId = client.getVarpValue(VarPlayerID.HPBAR_HUD_NPC);
+                if(opponentId != -1 && npc.getComposition() != null && opponentId == npc.getComposition().getId()) {
+                    final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
 
-        // Else try to use BOSS_HEALTH varbit from client to gather hp information
-        if (BossUtil.isNpcBoss(npc)) {
-            final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
-            final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
-            double percent = maxHp > 0 ? 100.0 * curHp / maxHp : 0;
-
-            switch (config.decimalHp()) {
-                case 1:  return String.valueOf(oneDecimalFormat.format(percent));
-                case 2:  return String.valueOf(twoDecimalFormat.format(percent));
-                default: return String.valueOf((percent >= 1) ? format.format(percent) : twoDecimalFormat.format(percent)); // Avoids display of 0 hp if npc is alive < 1 hp decimal
+                    // Defaults to percentage if numeric fails
+                    return usePercentage ? healthRatio : String.valueOf(curHp);
+                }
             }
+
+            // Defaults to percentage if numeric fails
+            return usePercentage ? healthRatio : String.valueOf((int) (wnpc.getCurrentHp()));
         }
 
-        // Default ratio based
+        // Percentage
         switch (config.decimalHp()) {
             case 1:  return String.valueOf(oneDecimalFormat.format(wnpc.getHealthRatio()));
             case 2:  return String.valueOf(twoDecimalFormat.format(wnpc.getHealthRatio()));
-            default: return String.valueOf(format.format(wnpc.getHealthRatio()));
+            default: return String.valueOf((wnpc.getHealthRatio() >= 1) ? format.format(wnpc.getHealthRatio()) : twoDecimalFormat.format(wnpc.getHealthRatio()));
         }
     }
 
@@ -122,27 +120,20 @@ public class MonsterHPOverlay extends Overlay {
         // Get max health through NPC manager, returns null if not found
         Integer maxHealth = npcManager.getHealth(npc.getId());
 
-        // Some npcs return null when using npcManager as they seem to not be added with all details to static.runelite.net?
-        // i assume because health mimic mechanics like Duke Sucellus poison wakeup that has a 200 fake health before fight id
-        // https://github.com/runelite/static.runelite.net/blob/gh-pages/npcs/npcs.json
-        if (npc.getName().equals("Duke Sucellus")) {
-            //if (npc.getId() == NpcID.DUKE_SUCELLUS_12191) { // Duke Sucellus - fight id
-            if (npc.getId() == DUKE_SUCELLUS_AWAKE) { // Duke Sucellus - fight id
-                maxHealth = 440; // we assume its health is 440
-            }
-            if (npc.getId() == DUKE_SUCELLUS_ASLEEP) { // Duke Sucellus - pre fight id
-                maxHealth = 200; // we assume its 'poison' health is 200
-            }
-        }
-
         // Health fix for some bosses (that are not correctly set in npcManager)
         if (BossUtil.isNpcBoss(npc)) {
             maxHealth = client.getVarbitValue(HPBAR_HUD_BASEHP);
+
+            // Special check for Chambers of xeric(cox) - check if both hands are dead (allows OLM_HEAD to be main varbit source)
+            if (npc.getId() == OLM_HEAD && isCoxOlmHandsAlive()) {
+                return;
+            }
+
             if (maxHealth <= 0) return;
         }
 
         // Use Numeric health
-        if (config.numericHealth() || wnpc.getIsTypeNumeric() == 1) {
+        if (config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1) {
             if (maxHealth != null) {
                 // Use the current health ratio and round it according to monsters max hp
                 double numericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
@@ -171,10 +162,10 @@ public class MonsterHPOverlay extends Overlay {
 
         if (config.stackHp()) {
             /*
-            * Stack method created by github.com/MoreBuchus in his tzhaar-hp-tracker plugin
-            * i Xines just modified this method to work with Monster HP plugin.
-            * So credits goes to Buchus for the method.
-            */
+             * Stack method created by github.com/MoreBuchus in his tzhaar-hp-tracker plugin
+             * i Xines just modified this method to work with Monster HP plugin.
+             * So credits goes to Buchus for the method.
+             */
 
             int offset = 0;
             NPC firstStack = null;
@@ -214,6 +205,21 @@ public class MonsterHPOverlay extends Overlay {
                 handleText(graphics, canvasPoint, currentHPString, timerColor);
             }
         }
+    }
+
+    // Returns true if either of olm hands are alive
+    private boolean isCoxOlmHandsAlive() {
+        for (WanderingNPC wnpc : plugin.getWanderingNPCs().values()) {
+            NPC npc = wnpc.getNpc();
+            if (npc == null) continue;
+
+            int id = npc.getId();
+            if ((id == OLM_HAND_RIGHT || id == OLM_HAND_LEFT) && !npc.isDead()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void updateFont() {

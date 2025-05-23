@@ -9,19 +9,17 @@ import static net.runelite.api.gameval.NpcID.*;
 @Getter
 public class BossUtil {
 
-    // Tombs of Amascut (demi bosses for now)
-    public static final ImmutableSet<String> TOA_BOSS_NAMES = ImmutableSet.of("Akkha", "Kephri", "Zebak", "Ba-Ba");
+    // Tombs of Amascut
+    private static final ImmutableSet<String> TOA_BOSS_NAMES = ImmutableSet.of("Akkha", "Kephri", "Zebak", "Ba-Ba", "Tumeken's Warden", "Elidinis' Warden");
 
     // Chambers of Xeric - Some ids for cox that support varbits
     private static final ImmutableSet<Integer> COX_BOSS_IDS = ImmutableSet.of(
         // The Great Olm
-        OLM_HEAD_SPAWNING, OLM_HAND_LEFT_SPAWNING, OLM_HAND_RIGHT_SPAWNING, OLM_HAND_RIGHT, OLM_HEAD, OLM_HAND_LEFT,
+        OLM_HEAD,
         // Tekton
         RAIDS_TEKTON_WAITING, RAIDS_TEKTON_WALKING_STANDARD, RAIDS_TEKTON_FIGHTING_STANDARD, RAIDS_TEKTON_WALKING_ENRAGED, RAIDS_TEKTON_FIGHTING_ENRAGED, RAIDS_TEKTON_HAMMERING,
         // Vespula
         RAIDS_VESPULA_FLYING, RAIDS_VESPULA_ENRAGED, RAIDS_VESPULA_WALKING, RAIDS_VESPULA_PORTAL,
-        // Vanguards
-        RAIDS_VANGUARD_DORMANT, RAIDS_VANGUARD_WALKING, RAIDS_VANGUARD_MELEE, RAIDS_VANGUARD_RANGED, RAIDS_VANGUARD_MAGIC,
         // Muttadile
         RAIDS_DOGODILE_SUBMERGED, RAIDS_DOGODILE_JUNIOR, RAIDS_DOGODILE,
         // Vasa
@@ -31,9 +29,9 @@ public class BossUtil {
     // Desert Treasure 2
     private static final ImmutableSet<Integer> DT2_BOSS_IDS = ImmutableSet.of(
         LEVIATHAN,
-        VARDORVIS,
-        WHISPERER
-        // DUKE, is already added hardcoded in MonsterHPOverlay -> renderTimer
+        VARDORVIS, VARDORVIS_BASE_POSTQUEST,
+        WHISPERER,
+        DUKE_SUCELLUS_AWAKE, DUKE_SUCELLUS_ASLEEP
     );
 
     // Generic bosses - bosses that does not have a specific section

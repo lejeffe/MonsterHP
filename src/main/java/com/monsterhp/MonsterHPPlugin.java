@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
+import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -179,25 +180,25 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private void updateWnpcProperties(NPC npc, WanderingNPC wnpc, Map<WorldPoint, Integer> locationCount) {
-        double monsterHp;
+        // Runelite api npc actor method to calculate npc hp ratio
+        double monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
 
         // Without a jagex health api we have to use duct tape fixes.
         // Normally we'd just use getHealthRatio and getHealthScale, but for some NPCS like TOA raid bosses we have to use varbits
         boolean isBoss = BossUtil.isNpcBoss(npc);
         if (isBoss) {
-            final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
-            final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
-            if (maxHp <= 0 || curHp <= 0) {
-                monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
-            } else {
-                monsterHp = 100.0 * curHp / maxHp;
+            // Getting NPC HUD to get npc id and match with selected WNPC - probably not needed
+            int opponentId = client.getVarpValue(VarPlayerID.HPBAR_HUD_NPC);
+            if(opponentId != -1 && npc.getComposition() != null && opponentId == npc.getComposition().getId()) {
+                final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
+                final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
+                if (maxHp > 0 && curHp > 0) {
+                    monsterHp = 100.0 * curHp / maxHp;
+                }
             }
-        } else {
-            // Runelite api npc actor method to calculate npc hp ratio
-            monsterHp = ((double) npc.getHealthRatio() / (double) npc.getHealthScale() * 100);
         }
 
-        if (!npc.isDead() && (npc.getHealthRatio() / npc.getHealthScale() != 1 || isBoss)) {
+        if (!npc.isDead() && (npc.getHealthRatio() / npc.getHealthScale() != 1)) {
             wnpc.setHealthRatio(monsterHp);
             wnpc.setCurrentLocation(npc.getWorldLocation());
             wnpc.setDead(false);
@@ -231,8 +232,7 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private boolean isNpcIdInList(int npcId) {
-        String npcIdString = String.valueOf(npcId);
-        return selectedNpcIDs.contains(npcIdString);
+        return selectedNpcIDs.contains(String.valueOf(npcId));
     }
 
     private boolean isNpcInList(NPC npc) {
@@ -319,7 +319,7 @@ public class MonsterHPPlugin extends Plugin {
         wanderingNPCs.clear();
 
         if (client.getGameState() != GameState.LOGGED_IN &&
-                client.getGameState() != GameState.LOADING) {
+            client.getGameState() != GameState.LOADING) {
             // NPCs are still in the client after logging out, ignore them
             return;
         }
@@ -339,15 +339,24 @@ public class MonsterHPPlugin extends Plugin {
 
     // Not to be confused with show all blacklist, this is for specific npc ids
     public boolean isNpcIdBlacklisted(NPC npc) {
-        if (npc != null) {
-            String npcName = npc.getName();
+        String npcName = npc.getName();
+        if (npcName != null) {
             int id = npc.getId();
 
             switch (npcName) {
                 case "Duke Sucellus": // duke sucellus - allow only fight id to be tracked from duke
-                    return id != DUKE_SUCELLUS_AWAKE && id != DUKE_SUCELLUS_ASLEEP; 
+                    return id != DUKE_SUCELLUS_AWAKE && id != DUKE_SUCELLUS_ASLEEP;
+                case "Vardorvis":
+                    return id == VARDORVIS_BASE_POSTQUEST; // Vardorvis outside instance.
                 case "Akkha":
                     return id == AKKHA_SPAWN; // Pre-enter room idle Akkha id 11789
+                case "Muttadile":
+                    // On name tagging this is duplicating dogodile junior's hp to submerged version
+                    // this is due to name matching, I doubt anybody want submerged version
+                    return id == RAIDS_DOGODILE_SUBMERGED;
+                case "Yama":
+                    // Blacklist everything but Yama the boss
+                    return id != YAMA;
                 default:
                     return false;
             }
