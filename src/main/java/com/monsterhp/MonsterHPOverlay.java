@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.Point;
-import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.client.game.NPCManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
@@ -80,14 +79,9 @@ public class MonsterHPOverlay extends Overlay {
             boolean usePercentage = wnpc.getCurrentHp() == 100 && wnpc.getHealthRatio() < 100.0;
 
             if (BossUtil.isNpcBoss(npc)) {
-                // Getting NPC HUD to get npc id and match with selected WNPC - probably not needed
-                int opponentId = client.getVarpValue(VarPlayerID.HPBAR_HUD_NPC);
-                if(opponentId != -1 && npc.getComposition() != null && opponentId == npc.getComposition().getId()) {
-                    final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
-
-                    // Defaults to percentage if numeric fails
-                    return usePercentage ? healthRatio : String.valueOf(curHp);
-                }
+                // Defaults to percentage if numeric fails
+                final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
+                return usePercentage ? healthRatio : String.valueOf(curHp);
             }
 
             // Defaults to percentage if numeric fails

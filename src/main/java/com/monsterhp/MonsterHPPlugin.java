@@ -1,5 +1,6 @@
 package com.monsterhp;
 
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Provides;
 
@@ -17,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
-import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -187,14 +187,13 @@ public class MonsterHPPlugin extends Plugin {
         // Normally we'd just use getHealthRatio and getHealthScale, but for some NPCS like TOA raid bosses we have to use varbits
         boolean isBoss = BossUtil.isNpcBoss(npc);
         if (isBoss) {
-            // Getting NPC HUD to get npc id and match with selected WNPC - probably not needed
-            int opponentId = client.getVarpValue(VarPlayerID.HPBAR_HUD_NPC);
-            if(opponentId != -1 && npc.getComposition() != null && opponentId == npc.getComposition().getId()) {
-                final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
-                final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
-                if (maxHp > 0 && curHp > 0) {
-                    monsterHp = 100.0 * curHp / maxHp;
-                }
+            final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
+            final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
+            if (maxHp > 0 && curHp >= 0) {
+                monsterHp = 100.0 * curHp / maxHp;
+            } else {
+                // If we can't get data just don't update.
+                return;
             }
         }
 
