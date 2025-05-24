@@ -4,37 +4,39 @@ import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 
 import net.runelite.api.*;
-import static net.runelite.api.NpcID.*;
-
-import java.util.Set;
+import static net.runelite.api.gameval.NpcID.*;
 
 @Getter
 public class BossUtil {
 
-    // Tombs of Amascut (demi bosses for now)
-    public static final Set<String> TOA_BOSS_NAMES = Set.of("Akkha", "Kephri", "Zebak", "Ba-Ba");
+    // Tombs of Amascut
+    private static final ImmutableSet<String> TOA_BOSS_NAMES = ImmutableSet.of("Akkha", "Kephri", "Zebak", "Ba-Ba", "Tumeken's Warden", "Elidinis' Warden");
 
-    // Chambers of Xeric - Some ids for cox is only ratio based, so we comment them out to preserve fuller list (percentage still works if tagged)
-    private static final ImmutableSet<Integer> COX_BOSS_NAMES = ImmutableSet.of(
-            TEKTON, TEKTON_7541, TEKTON_7542, TEKTON_ENRAGED, TEKTON_ENRAGED_7544, TEKTON_7545,
-            VESPULA, VESPULA_7531, VESPULA_7532, ABYSSAL_PORTAL,
-            VANGUARD, VANGUARD_7526, VANGUARD_7527, VANGUARD_7528, VANGUARD_7529,
-            GREAT_OLM, GREAT_OLM_LEFT_CLAW, GREAT_OLM_RIGHT_CLAW, GREAT_OLM_RIGHT_CLAW_7553, GREAT_OLM_7554, GREAT_OLM_LEFT_CLAW_7555,
-            //DEATHLY_RANGER, DEATHLY_MAGE,
-            MUTTADILE, MUTTADILE_7562, MUTTADILE_7563,
-            VASA_NISTIRIO, VASA_NISTIRIO_7567
-            //GUARDIAN, GUARDIAN_7570, GUARDIAN_7571, GUARDIAN_7572,
-            //LIZARDMAN_SHAMAN_7573, LIZARDMAN_SHAMAN_7574,
-            //ICE_DEMON, ICE_DEMON_7585,
-            //SKELETAL_MYSTIC, SKELETAL_MYSTIC_7605, SKELETAL_MYSTIC_7606
+    // Chambers of Xeric - Some ids for cox that support varbits
+    private static final ImmutableSet<Integer> COX_BOSS_IDS = ImmutableSet.of(
+        // The Great Olm
+        OLM_HEAD,
+        // Tekton
+        RAIDS_TEKTON_WAITING, RAIDS_TEKTON_WALKING_STANDARD, RAIDS_TEKTON_FIGHTING_STANDARD, RAIDS_TEKTON_WALKING_ENRAGED, RAIDS_TEKTON_FIGHTING_ENRAGED, RAIDS_TEKTON_HAMMERING,
+        // Vespula
+        RAIDS_VESPULA_FLYING, RAIDS_VESPULA_ENRAGED, RAIDS_VESPULA_WALKING, RAIDS_VESPULA_PORTAL,
+        // Muttadile
+        RAIDS_DOGODILE_SUBMERGED, RAIDS_DOGODILE_JUNIOR, RAIDS_DOGODILE,
+        // Vasa
+        RAIDS_VASANISTIRIO_WALKING, RAIDS_VASANISTIRIO_HEALING
     );
 
     // Desert Treasure 2
-    private static final ImmutableSet<Integer> DT2_BOSS_NAMES = ImmutableSet.of(
-            THE_LEVIATHAN,
-            VARDORVIS,
-            THE_WHISPERER
-            // DUKE, is already added hardcoded in MonsterHPOverlay -> renderTimer
+    private static final ImmutableSet<Integer> DT2_BOSS_IDS = ImmutableSet.of(
+        LEVIATHAN,
+        VARDORVIS, VARDORVIS_BASE_POSTQUEST,
+        WHISPERER,
+        DUKE_SUCELLUS_AWAKE, DUKE_SUCELLUS_ASLEEP
+    );
+
+    // Generic bosses - bosses that does not have a specific section
+    private static final ImmutableSet<Integer> GEN_BOSS_IDS = ImmutableSet.of(
+        YAMA
     );
 
     public static boolean isNpcBossFromTOA(NPC npc) {
@@ -42,13 +44,13 @@ public class BossUtil {
         return name != null && TOA_BOSS_NAMES.contains(name);
     }
 
-    public static boolean isNpcBossFromCOX(NPC npc) {
-        return COX_BOSS_NAMES.contains(npc.getId());
-    }
+    public static boolean isNpcBossFromCOX(NPC npc) {return COX_BOSS_IDS.contains(npc.getId());}
 
-    public static boolean isNpcBossFromDT2(NPC npc) {return DT2_BOSS_NAMES.contains(npc.getId());}
+    public static boolean isNpcBossFromDT2(NPC npc) {return DT2_BOSS_IDS.contains(npc.getId());}
+
+    public static boolean isNpcBossGeneric(NPC npc) {return GEN_BOSS_IDS.contains(npc.getId());}
 
     public static boolean isNpcBoss(NPC npc) {
-        return isNpcBossFromCOX(npc) || isNpcBossFromTOA(npc) ||  isNpcBossFromDT2(npc);
+        return isNpcBossFromCOX(npc) || isNpcBossFromTOA(npc) ||  isNpcBossFromDT2(npc) || isNpcBossGeneric(npc);
     }
 }

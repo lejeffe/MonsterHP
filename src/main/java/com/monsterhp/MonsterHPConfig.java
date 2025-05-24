@@ -276,12 +276,12 @@ public interface MonsterHPConfig extends Config {
 
     @ConfigItem(
             position = 19,
-            keyName = "numericHealth",
-            name = "Numeric Health",
-            description = "Show the numeric health of the monster instead of percentage. (Not all npcs supports this)",
+            keyName = "numericAllHealth",
+            name = "Numeric All Health",
+            description = "Trys to show the numeric health of all tagged monsters instead of percentage.",
             section = hp_settings
     )
-    default boolean numericHealth() {
+    default boolean numericAllHealth() {
         return false;
     }
 
