@@ -276,7 +276,7 @@ public interface MonsterHPConfig extends Config {
 
     @ConfigItem(
             position = 19,
-            keyName = "numericAllHealth",
+            keyName = "numericHealth",
             name = "Numeric All Health",
             description = "Trys to show the numeric health of all tagged monsters instead of percentage.",
             section = hp_settings
