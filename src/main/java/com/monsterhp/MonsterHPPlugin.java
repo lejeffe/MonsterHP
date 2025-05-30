@@ -190,7 +190,10 @@ public class MonsterHPPlugin extends Plugin {
             final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
             final int maxHp = client.getVarbitValue(HPBAR_HUD_BASEHP);
             if (maxHp > 0 && curHp >= 0) {
-                monsterHp = 100.0 * curHp / maxHp;
+                double hpVarbitRatio = 100.0 * curHp / maxHp;
+                if (hpVarbitRatio > 0) {
+                    monsterHp = hpVarbitRatio;
+                }
             } else {
                 // If we can't get data just don't update.
                 return;
