@@ -40,8 +40,11 @@ public class BossUtil {
     );
 
     public static boolean isNpcBossFromTOA(NPC npc) {
+        int id = npc.getId();
         String name = npc.getName();
-        return name != null && TOA_BOSS_NAMES.contains(name);
+        boolean isWardenP1 = (id == TOA_WARDEN_TUMEKEN_PHASE1 || id == TOA_WARDEN_ELIDINIS_PHASE1);
+
+        return name != null && TOA_BOSS_NAMES.contains(name) && !isWardenP1;
     }
 
     public static boolean isNpcBossFromCOX(NPC npc) {return COX_BOSS_IDS.contains(npc.getId());}

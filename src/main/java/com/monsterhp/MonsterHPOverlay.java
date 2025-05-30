@@ -143,7 +143,7 @@ public class MonsterHPOverlay extends Overlay {
         }
 
         if (config.useGradientHP()) {
-            if (maxHealth != null) {
+            if (maxHealth != null && maxHealth > 1) {
                 int curNumericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
                 timerColor = getGradientHpColor(curNumericHealth, maxHealth);
             } else { // Try percentage based gradient hp - happens if npcManager can't get numeric max health.
