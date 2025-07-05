@@ -278,7 +278,7 @@ public interface MonsterHPConfig extends Config {
             position = 19,
             keyName = "numericHealth",
             name = "Numeric All Health",
-            description = "Trys to show the numeric health of all tagged monsters instead of percentage.",
+            description = "Tries to show the numeric health of all tagged monsters instead of percentage.",
             section = hp_settings
     )
     default boolean numericAllHealth() {
