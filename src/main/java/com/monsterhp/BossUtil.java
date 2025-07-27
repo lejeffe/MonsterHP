@@ -36,7 +36,8 @@ public class BossUtil {
 
     // Generic bosses - bosses that does not have a specific section
     private static final ImmutableSet<Integer> GEN_BOSS_IDS = ImmutableSet.of(
-        YAMA
+        YAMA,
+        DOM_BOSS, DOM_BOSS_SHIELDED, DOM_BOSS_BURROWED
     );
 
     public static boolean isNpcBossFromTOA(NPC npc) {
