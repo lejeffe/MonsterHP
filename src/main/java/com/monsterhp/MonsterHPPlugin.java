@@ -200,7 +200,11 @@ public class MonsterHPPlugin extends Plugin {
             }
         }
 
-        if (!npc.isDead() && (npc.getHealthRatio() / npc.getHealthScale() != 1)) {
+        // Doom of Mokhaiotl - Burrow or shielded transition support
+        boolean isDoomBoss = BossUtil.DOOM_BOSS_IDS.contains(npc.getId());
+
+        // Update WanderingNPC properties
+        if (!npc.isDead() && ((npc.getHealthRatio() / npc.getHealthScale() != 1) || isDoomBoss)) {
             wnpc.setHealthRatio(monsterHp);
             wnpc.setCurrentLocation(npc.getWorldLocation());
             wnpc.setDead(false);

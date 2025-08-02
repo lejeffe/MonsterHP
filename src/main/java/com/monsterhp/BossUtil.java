@@ -9,7 +9,7 @@ import static net.runelite.api.gameval.NpcID.*;
 @Getter
 public class BossUtil {
 
-    // Tombs of Amascut
+    // Tombs of Amascut - String identification seems like the way to identify these bosses (with blacklist control)
     private static final ImmutableSet<String> TOA_BOSS_NAMES = ImmutableSet.of("Akkha", "Kephri", "Zebak", "Ba-Ba", "Tumeken's Warden", "Elidinis' Warden");
 
     // Chambers of Xeric - Some ids for cox that support varbits
@@ -36,9 +36,23 @@ public class BossUtil {
 
     // Generic bosses - bosses that does not have a specific section
     private static final ImmutableSet<Integer> GEN_BOSS_IDS = ImmutableSet.of(
-        YAMA,
-        DOM_BOSS, DOM_BOSS_SHIELDED, DOM_BOSS_BURROWED
+        YAMA
     );
+
+    // Doom of Mokhaiotl
+    public static final ImmutableSet<Integer> DOOM_BOSS_IDS = ImmutableSet.of(
+        DOM_BOSS,
+        DOM_BOSS_SHIELDED,
+        DOM_BOSS_BURROWED
+    );
+
+    private static final ImmutableSet<Integer> ALL_BOSS_IDS = 
+        ImmutableSet.<Integer>builder()
+            .addAll(GEN_BOSS_IDS)
+            .addAll(COX_BOSS_IDS)
+            .addAll(DT2_BOSS_IDS)
+            .addAll(DOOM_BOSS_IDS)
+            .build();
 
     public static boolean isNpcBossFromTOA(NPC npc) {
         int id = npc.getId();
@@ -48,13 +62,11 @@ public class BossUtil {
         return name != null && TOA_BOSS_NAMES.contains(name) && !isWardenP1;
     }
 
-    public static boolean isNpcBossFromCOX(NPC npc) {return COX_BOSS_IDS.contains(npc.getId());}
-
-    public static boolean isNpcBossFromDT2(NPC npc) {return DT2_BOSS_IDS.contains(npc.getId());}
-
-    public static boolean isNpcBossGeneric(NPC npc) {return GEN_BOSS_IDS.contains(npc.getId());}
-
     public static boolean isNpcBoss(NPC npc) {
-        return isNpcBossFromCOX(npc) || isNpcBossFromTOA(npc) ||  isNpcBossFromDT2(npc) || isNpcBossGeneric(npc);
+        if (ALL_BOSS_IDS.contains(npc.getId())) {
+            return true;
+        }
+        // Only check TOA names if ID lookup fails
+        return isNpcBossFromTOA(npc);
     }
 }
