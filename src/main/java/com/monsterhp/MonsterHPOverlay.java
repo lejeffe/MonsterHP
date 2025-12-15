@@ -127,12 +127,11 @@ public class MonsterHPOverlay extends Overlay {
         }
 
         // Use Numeric health
-        if (config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1) {
-            if (maxHealth != null) {
-                // Use the current health ratio and round it according to monsters max hp
-                double numericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
-                wnpc.setCurrentHp(numericHealth);
-            }
+        boolean isUsingNumeric = config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1;
+        if (isUsingNumeric && maxHealth != null) {
+            // Use the current health ratio and round it according to monsters max hp
+            double numericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
+            wnpc.setCurrentHp(numericHealth);
         }
 
         // Coloring
@@ -153,7 +152,7 @@ public class MonsterHPOverlay extends Overlay {
         }
 
         String currentHPString = getCurrentHpString(wnpc);
-        if (config.appendPercentSymbol()) {
+        if (config.appendPercentSymbol() && !isUsingNumeric) {
             currentHPString += "%";
         }
 
