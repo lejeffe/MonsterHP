@@ -165,12 +165,9 @@ public class MonsterHPOverlay extends Overlay {
 
             int offset = 0;
             NPC firstStack = null;
-            for (NPC sNpc : stackedNpcs)
-            {
-                if (sNpc.getWorldLocation().getX() == npc.getWorldLocation().getX() && sNpc.getWorldLocation().getY() == npc.getWorldLocation().getY())
-                {
-                    if (firstStack == null)
-                    {
+            for (NPC sNpc : stackedNpcs) {
+                if (sNpc.getWorldLocation().getX() == npc.getWorldLocation().getX() && sNpc.getWorldLocation().getY() == npc.getWorldLocation().getY()) {
+                    if (firstStack == null) {
                         firstStack = npc;
                     }
                     offset += graphics.getFontMetrics().getHeight();

@@ -46,6 +46,10 @@ public class WanderingNPC {
     @Setter
     private int isTypeNumeric;
 
+    @Getter
+    @Setter
+    private int healthThreshold;
+
     WanderingNPC(NPC npc) {
         this.npc = npc;
         this.id = npc.getId();
@@ -58,5 +62,6 @@ public class WanderingNPC {
         this.isDead = false;
         this.offset = 0;
         this.isTypeNumeric = 0;
+        this.healthThreshold = 0;
     }
 }

@@ -55,7 +55,7 @@ public class MonsterHPPlugin extends Plugin {
 
     private List<String> selectedNpcs = new ArrayList<>();
 
-    private List<String> selectedNpcsWithTypes = new ArrayList<>();
+    private List<String> selectedNpcsWithRules = new ArrayList<>();
 
     private List<String> selectedNpcIDs = new ArrayList<>();
 
@@ -74,7 +74,7 @@ public class MonsterHPPlugin extends Plugin {
     protected void startUp() throws Exception {
         overlayManager.add(monsterhpoverlay);
         selectedNpcs = getSelectedNpcNames(false);
-        selectedNpcsWithTypes = getSelectedNpcNames(true);
+        selectedNpcsWithRules = getSelectedNpcNames(true);
         selectedNpcIDs = getSelectedNpcIds();
 
         this.npcShowAll = config.npcShowAll();
@@ -99,6 +99,10 @@ public class MonsterHPPlugin extends Plugin {
 
         if (isNpcNumericDefined(npc))
             wnpc.setIsTypeNumeric(1);
+
+        Integer thresholdOverride = getNpcThreshold(npc);
+        if (thresholdOverride != null)
+            wnpc.setHealthThreshold(thresholdOverride);
 
         wanderingNPCs.put(npc.getIndex(), wnpc);
         npcLocations.put(npc.getIndex(), npc.getWorldLocation());
@@ -134,8 +138,7 @@ public class MonsterHPPlugin extends Plugin {
 
         // Duke Sucellus have no onNpcDespawned when dying but fires sometimes on instance leaving if npc is not dead but in 12167(DUKE_SUCELLUS_ASLEEP) state...
         // So we have to do this special little step
-        if (id == DUKE_SUCELLUS_DEAD || id == DUKE_SUCELLUS_DEAD_QUEST)
-        {
+        if (id == DUKE_SUCELLUS_DEAD || id == DUKE_SUCELLUS_DEAD_QUEST) {
             wanderingNPCs.remove(idx);
             npcLocations.remove(idx);
         }
@@ -146,6 +149,10 @@ public class MonsterHPPlugin extends Plugin {
 
             if (isNpcNumericDefined(npc))
                 wnpc.setIsTypeNumeric(1);
+
+            Integer thresholdOverride = getNpcThreshold(npc);
+            if (thresholdOverride != null)
+                wnpc.setHealthThreshold(thresholdOverride);
 
             wanderingNPCs.put(idx, wnpc);
             npcLocations.put(idx, npc.getWorldLocation());
@@ -163,7 +170,7 @@ public class MonsterHPPlugin extends Plugin {
 
         HashMap<WorldPoint, Integer> locationCount = new HashMap<>();
         for (WorldPoint location : npcLocations.values()) {
-            locationCount.put(location, locationCount.getOrDefault(location, 0) + 1);
+            locationCount.merge(location, 1, Integer::sum);
         }
 
         for (NPC npc : client.getTopLevelWorldView().npcs()) {
@@ -227,13 +234,13 @@ public class MonsterHPPlugin extends Plugin {
 
     private boolean isNpcNameInShowAllBlacklist(String npcName) {
         // Check for exact match or wildcard match
-        return npcName != null && (npcShowAllBlacklist.contains(npcName.toLowerCase()) ||
+        return npcName != null && (npcShowAllBlacklist.contains(npcName) ||
                 npcShowAllBlacklist.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, npcName)));
     }
 
     private boolean isNpcNameInList(String npcName) {
         // Check for exact match or wildcard match
-        return npcName != null && (selectedNpcs.contains(npcName.toLowerCase()) ||
+        return npcName != null && (selectedNpcs.contains(npcName) ||
                 selectedNpcs.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, npcName)));
     }
 
@@ -244,10 +251,13 @@ public class MonsterHPPlugin extends Plugin {
     private boolean isNpcInList(NPC npc) {
         if (isNpcIdBlacklisted(npc)) return false;
 
-        boolean isInList = (isNpcNameInList(npc.getName()) || isNpcIdInList(npc.getId()));
+        String npcName = npc.getName();
+        String npcNameLower = npcName == null ? null : npcName.toLowerCase();
+
+        boolean isInList = (isNpcNameInList(npcNameLower) || isNpcIdInList(npc.getId()));
 
         if (!isInList) {
-            return this.npcShowAll && !isNpcNameInShowAllBlacklist(npc.getName());
+            return this.npcShowAll && !isNpcNameInShowAllBlacklist(npcNameLower);
         }
 
         return true;
@@ -257,7 +267,7 @@ public class MonsterHPPlugin extends Plugin {
     public void onConfigChanged(ConfigChanged configChanged) {
         if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcShowAllBlacklist") || Objects.equals(configChanged.getKey(), "npcToShowHp") || Objects.equals(configChanged.getKey(), "npcIdToShowHp"))) {
             selectedNpcs = getSelectedNpcNames(false);
-            selectedNpcsWithTypes = getSelectedNpcNames(true);
+            selectedNpcsWithRules = getSelectedNpcNames(true);
             selectedNpcIDs = getSelectedNpcIds();
 
             this.npcShowAll = config.npcShowAll();
@@ -273,21 +283,29 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     @VisibleForTesting
-    List<String> getSelectedNpcNames(boolean includeDisplaytype) {
+    List<String> getSelectedNpcNames(boolean includeRuleDisplay) {
         String configNPCs = config.npcToShowHp().toLowerCase();
         if (configNPCs.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // "Raw" contains the comma-separated RAW text, so it has ":n" in their names
+        // "Raw" contains the comma-separated RAW text, this includes npc rules like ":n"
         List<String> selectedNpcNamesRaw = Text.fromCSV(configNPCs);
 
-        // If false, remove all display types from the string to create a list of only the NPC names
-        if (!includeDisplaytype) {
+        // If false, remove all rules from the string to create a list of only the NPC names
+        if (!includeRuleDisplay) {
             List<String> strippedNpcNames = new ArrayList<>(selectedNpcNamesRaw);
 
-            // Strips the ":n" suffix from each name if present
-            strippedNpcNames.replaceAll(npcName -> npcName != null && npcName.contains(":") ? npcName.split(":")[0] : npcName);
+            // Strips the rule suffixes from each name if present
+            strippedNpcNames.replaceAll(npcName -> {
+                if (!npcName.contains(":")) {
+                    return npcName;
+                }
+
+                // Handle edge cases like "::" or ":::".. where split[0] would be empty or non-existent
+                String[] parts = npcName.split(":");
+                return parts.length > 0 && !parts[0].isEmpty() ? parts[0] : npcName;
+            });
 
             return strippedNpcNames;
         }
@@ -305,20 +323,27 @@ public class MonsterHPPlugin extends Plugin {
         return Text.fromCSV(configNPCIDs);
     }
 
-    @VisibleForTesting
+    
     boolean isNpcNumericDefined(NPC npc) {
-        String npcNameTargetLowerCase = Objects.requireNonNull(npc.getName()).toLowerCase();
-
-        // Iterate over each entry in selectedNpcsWithTypes and use WildcardMatcher for matching
-        for (String npcNameRaw : selectedNpcsWithTypes) {
-            String npcName = npcNameRaw.contains(":") ? npcNameRaw.split(":")[0] : npcNameRaw;
-            boolean isMatch = WildcardMatcher.matches(npcName, npcNameTargetLowerCase);
-
-            if (npcNameRaw.contains(":n") && isMatch) {
-                return true;
+        String npcName = Objects.requireNonNull(npc.getName()).toLowerCase();
+        for (String npcRaw : selectedNpcsWithRules) {
+            NpcRule rule = getNpcRule(npcRaw);
+            if (WildcardMatcher.matches(rule.namePattern, npcName)) {
+                return rule.numeric;
             }
         }
         return false;
+    }
+
+    Integer getNpcThreshold(NPC npc) {
+        String npcName = Objects.requireNonNull(npc.getName()).toLowerCase();
+        for (String npcRaw : selectedNpcsWithRules) {
+            NpcRule rule = getNpcRule(npcRaw);
+            if (WildcardMatcher.matches(rule.namePattern, npcName)) {
+                return rule.threshold;
+            }
+        }
+        return null;
     }
 
     private void rebuildAllNpcs() {
@@ -336,6 +361,10 @@ public class MonsterHPPlugin extends Plugin {
 
                 if (isNpcNumericDefined(npc))
                     wnpc.setIsTypeNumeric(1);
+
+                Integer thresholdOverride = getNpcThreshold(npc);
+                if (thresholdOverride != null)
+                    wnpc.setHealthThreshold(thresholdOverride);
 
                 wanderingNPCs.put(npc.getIndex(), wnpc);
                 npcLocations.put(npc.getIndex(), npc.getWorldLocation());
@@ -369,5 +398,27 @@ public class MonsterHPPlugin extends Plugin {
         }
 
         return false;
+    }
+
+    public static NpcRule getNpcRule(String npcRaw) {
+        String[] parts = npcRaw.split(":");
+
+        // Name should always be first part index e.g., 'Guard' from: 'Guard:n:10'.
+        String name = (parts.length > 0 && !parts[0].isEmpty()) ? parts[0] : "";
+        boolean numeric = false;
+        Integer threshold = null;
+
+        for (String s : parts) {
+            if (s.equalsIgnoreCase("n")) {
+                numeric = true;
+            } else {
+                try {
+                    threshold = Integer.parseInt(s);
+                }
+                catch (NumberFormatException ignored) {} // ignore invalid parts
+            }
+        }
+
+        return new NpcRule(name, numeric, threshold);
     }
 }

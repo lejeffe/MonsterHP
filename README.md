@@ -8,16 +8,16 @@ The plugin remembers the HP when the NPC doesn't have a HP bar shown.
 
 The plugin allows for special operators/keywords in the NPC names list, making it easier to customize HP displays per NPC.
 
-### Wildcard Matching
-To display HP for all NPCs with names that start with a specific prefix, use the `*` wildcard at the end of the name.  
+### ⭐️ Wildcard Matching
+To display HP for all NPCs with names that start with a specific prefix or suffix, use the `*` wildcard at the start or end of the name.
 
 **Example:**  
 To display HP text for all monsters that start with example "skeleton", use:  
 
 `skeleton*`
 
-### Numeric Health Display
-To show the numeric health of an NPC (instead of a percentage), add the `:n` keyword after the NPC name. **Note**: Not all NPCs support this option.  
+### 🔢 Numeric Health Display
+To show the numeric health of an NPC (instead of the default percentage), add `:n` keyword after the NPC name. **Note**: Not all NPCs support this option.  
 
 **Example:**  
 To display numeric health for "skeleton", use:  
@@ -27,8 +27,18 @@ To display numeric health for "skeleton", use:
 ### Or Combine Both!
 `skele*:n` - Marks everything starting with skele and set it's display type to `:n` for numeric.
 
-## Usage example:
+### ❤️ Per NPC Health Threshold Support
+
+You can also set a per-NPC HP threshold to trigger the low‑HP display. Type keyword `:XX` replace XX with the target number.
+
+Example: `skele*:10,goblin:25,man:n:10`
+- `Skele*` uses the low‑HP style at `HP < 10%`
+- `goblin` uses the low‑HP style at `HP < 25%`
+- `man` shows numeric HP because of `:n` and low-HP style at `HP < 10`
+
+
+## 🚀 Example NPC List:
 
 **Notice**: Comma seperator
 
-`goblin,man:n,skele*,guard*:n`
+`goblin,man:n,skele*,guard*:n,spider:30,dragon:n:10`
