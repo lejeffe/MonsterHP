@@ -70,13 +70,14 @@ public class MonsterHPOverlay extends Overlay {
     private String getCurrentHpString(WanderingNPC wnpc) {
         boolean showNumericHealth = config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1;
         NPC npc = wnpc.getNpc();
+        double healthRatioValue = wnpc.getHealthRatio();
 
         // Numeric
         if (showNumericHealth) {
-            String healthRatio = format.format(wnpc.getHealthRatio());
+            String healthRatio = format.format(healthRatioValue);
 
-            // getCurrentHp() returns numeric hp value if set, default is WanderingNpc value 100
-            boolean usePercentage = wnpc.getCurrentHp() == 100 && wnpc.getHealthRatio() < 100.0;
+            // getCurrentHp() returns numeric hp value if set, default is WanderingNpc value -1
+            boolean usePercentage = wnpc.getCurrentHp() == -1 && healthRatioValue < 100.0;
 
             if (BossUtil.isNpcBoss(npc)) {
                 // Defaults to percentage if numeric fails
@@ -90,9 +91,9 @@ public class MonsterHPOverlay extends Overlay {
 
         // Percentage
         switch (config.decimalHp()) {
-            case 1:  return String.valueOf(oneDecimalFormat.format(wnpc.getHealthRatio()));
-            case 2:  return String.valueOf(twoDecimalFormat.format(wnpc.getHealthRatio()));
-            default: return String.valueOf((wnpc.getHealthRatio() >= 1) ? format.format(wnpc.getHealthRatio()) : twoDecimalFormat.format(wnpc.getHealthRatio()));
+            case 1:  return String.valueOf(oneDecimalFormat.format(healthRatioValue));
+            case 2:  return String.valueOf(twoDecimalFormat.format(healthRatioValue));
+            default: return String.valueOf((healthRatioValue >= 1) ? format.format(healthRatioValue) : twoDecimalFormat.format(healthRatioValue));
         }
     }
 
@@ -130,7 +131,7 @@ public class MonsterHPOverlay extends Overlay {
         boolean isUsingNumeric = config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1;
         if (isUsingNumeric && maxHealth != null) {
             // Use the current health ratio and round it according to monsters max hp
-            double numericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
+            double numericHealth = (int) Math.round((wNpcHealthRatio / 100) * maxHealth);
             wnpc.setCurrentHp(numericHealth);
         }
 

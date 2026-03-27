@@ -56,7 +56,7 @@ public class WanderingNPC {
         this.npcName = npc.getName();
         this.npcIndex = npc.getIndex();
         this.currentLocation = npc.getWorldLocation();
-        this.currentHp = 100;
+        this.currentHp = -1;
         this.healthRatio = 100;
         this.healthScale = npc.getHealthScale();
         this.isDead = false;
