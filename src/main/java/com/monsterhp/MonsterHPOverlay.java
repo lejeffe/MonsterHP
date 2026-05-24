@@ -73,29 +73,31 @@ public class MonsterHPOverlay extends Overlay {
 
         // Numeric
         if (showNumericHealth) {
-            String healthRatio = format.format(wnpc.getHealthRatio());
+            boolean usePercentage = !wnpc.isSupportsNumeric() && wnpc.getHealthRatio() < 100.0;
 
-            // getCurrentHp() returns numeric hp value if set, default is WanderingNpc value 100
-            boolean usePercentage = wnpc.getCurrentHp() == 100 && wnpc.getHealthRatio() < 100.0;
+            if (!usePercentage) {
+                if (BossUtil.isNpcBoss(npc)) {
+                    // Defaults to percentage if numeric fails
+                    final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
+                    return String.valueOf(curHp);
+                }
 
-            if (BossUtil.isNpcBoss(npc)) {
-                // Defaults to percentage if numeric fails
-                final int curHp = client.getVarbitValue(HPBAR_HUD_HP);
-                return usePercentage ? healthRatio : String.valueOf(curHp);
+                return String.valueOf((int) (wnpc.getCurrentHp()));
             }
-
-            // Defaults to percentage if numeric fails
-            return usePercentage ? healthRatio : String.valueOf((int) (wnpc.getCurrentHp()));
         }
 
         // Percentage
-        switch (config.decimalHp()) {
-            case 1:  return String.valueOf(oneDecimalFormat.format(wnpc.getHealthRatio()));
-            case 2:  return String.valueOf(twoDecimalFormat.format(wnpc.getHealthRatio()));
-            default: return String.valueOf((wnpc.getHealthRatio() >= 1) ? format.format(wnpc.getHealthRatio()) : twoDecimalFormat.format(wnpc.getHealthRatio()));
-        }
+        return getNpcDecimalHealthPercentage(wnpc.getHealthRatio());
     }
 
+    // Returns health ratio formatted by user decimal health config value
+    private String getNpcDecimalHealthPercentage(double healthRatio) {
+        switch (config.decimalHp()) {
+            case 1:  return String.valueOf(oneDecimalFormat.format(healthRatio));
+            case 2:  return String.valueOf(twoDecimalFormat.format(healthRatio));
+            default: return String.valueOf((healthRatio >= 1) ? format.format(healthRatio) : twoDecimalFormat.format(healthRatio));
+        }
+    }
 
     private void renderTimer(final WanderingNPC wnpc, final Graphics2D graphics, ArrayList<NPC> stackedNpcs) {
         if (wnpc == null || wnpc.isDead()) {
@@ -126,11 +128,17 @@ public class MonsterHPOverlay extends Overlay {
             if (maxHealth <= 0) return;
         }
 
+        // If NPC Does not support numeric health, remove support
+        if (maxHealth == null) {
+            wnpc.setSupportsNumeric(false);
+        }
+
         // Use Numeric health
-        boolean isUsingNumeric = config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1;
+        // TLDR: (isSupportsNumeric check required for later % symbol concatenation)
+        boolean isUsingNumeric = (config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1) && wnpc.isSupportsNumeric();
         if (isUsingNumeric && maxHealth != null) {
             // Use the current health ratio and round it according to monsters max hp
-            double numericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
+            double numericHealth = (int) Math.round((wNpcHealthRatio / 100) * maxHealth);
             wnpc.setCurrentHp(numericHealth);
         }
 
@@ -143,11 +151,21 @@ public class MonsterHPOverlay extends Overlay {
 
         if (config.useGradientHP()) {
             if (maxHealth != null && maxHealth > 1) {
-                int curNumericHealth = (int) Math.floor((wNpcHealthRatio / 100) * maxHealth);
+                int curNumericHealth = (int) Math.round((wNpcHealthRatio / 100) * maxHealth);
                 timerColor = getGradientHpColor(curNumericHealth, maxHealth);
             } else { // Try percentage based gradient hp - happens if npcManager can't get numeric max health.
-                int curNumericHealth = (int) Math.floor(wNpcHealthRatio);
+                int curNumericHealth = (int) Math.round(wNpcHealthRatio);
                 timerColor = getGradientHpColor(curNumericHealth, 100);
+            }
+        }
+
+        // Per NPC Threshold support
+        int healthThreshold = wnpc.getHealthThreshold();
+        if (healthThreshold > 0) {
+            boolean belowThreshold = isUsingNumeric ?
+                (int) Math.round(wnpc.getCurrentHp()) < healthThreshold : wNpcHealthRatio < healthThreshold;
+            if (belowThreshold) {
+                timerColor = config.lowHPColor();
             }
         }
 
