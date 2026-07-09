@@ -36,7 +36,8 @@ public class BossUtil {
 
     // Generic bosses - bosses that does not have a specific section
     private static final ImmutableSet<Integer> GEN_BOSS_IDS = ImmutableSet.of(
-        YAMA
+        YAMA,
+        MAGGOT_KING
     );
 
     // Doom of Mokhaiotl

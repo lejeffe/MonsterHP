@@ -59,6 +59,8 @@ public class MonsterHPPlugin extends Plugin {
 
     private List<String> selectedNpcIDs = new ArrayList<>();
 
+    private List<String> selectedNpcIDsWithRules = new ArrayList<>();
+
     private List<String> npcShowAllBlacklist = new ArrayList<>();
 
     private boolean npcShowAll = true;
@@ -75,7 +77,8 @@ public class MonsterHPPlugin extends Plugin {
         overlayManager.add(monsterhpoverlay);
         selectedNpcs = getSelectedNpcNames(false);
         selectedNpcsWithRules = getSelectedNpcNames(true);
-        selectedNpcIDs = getSelectedNpcIds();
+        selectedNpcIDs = getSelectedNpcIds(false);
+        selectedNpcIDsWithRules = getSelectedNpcIds(true);
 
         this.npcShowAll = config.npcShowAll();
         npcShowAllBlacklist = getShowAllBlacklistNames();
@@ -268,7 +271,8 @@ public class MonsterHPPlugin extends Plugin {
         if (Objects.equals(configChanged.getGroup(), "MonsterHP") && (Objects.equals(configChanged.getKey(), "npcShowAll") || Objects.equals(configChanged.getKey(), "npcShowAllBlacklist") || Objects.equals(configChanged.getKey(), "npcToShowHp") || Objects.equals(configChanged.getKey(), "npcIdToShowHp"))) {
             selectedNpcs = getSelectedNpcNames(false);
             selectedNpcsWithRules = getSelectedNpcNames(true);
-            selectedNpcIDs = getSelectedNpcIds();
+            selectedNpcIDs = getSelectedNpcIds(false);
+            selectedNpcIDsWithRules = getSelectedNpcIds(true);
 
             this.npcShowAll = config.npcShowAll();
             npcShowAllBlacklist = getShowAllBlacklistNames();
@@ -284,43 +288,42 @@ public class MonsterHPPlugin extends Plugin {
 
     @VisibleForTesting
     List<String> getSelectedNpcNames(boolean includeRuleDisplay) {
-        String configNPCs = config.npcToShowHp().toLowerCase();
-        if (configNPCs.isEmpty()) {
+        return parseConfigCsvList(config.npcToShowHp(), includeRuleDisplay);
+    }
+
+    @VisibleForTesting
+    List<String> getSelectedNpcIds(boolean includeRuleDisplay) {
+        return parseConfigCsvList(config.npcIdToShowHp(), includeRuleDisplay);
+    }
+
+    private List<String> parseConfigCsvList(String configValue, boolean includeRuleDisplay) {
+        String config = configValue.toLowerCase();
+        if (config.isEmpty()) {
             return Collections.emptyList();
         }
 
         // "Raw" contains the comma-separated RAW text, this includes npc rules like ":n"
-        List<String> selectedNpcNamesRaw = Text.fromCSV(configNPCs);
+        List<String> rawValues = Text.fromCSV(config);
 
-        // If false, remove all rules from the string to create a list of only the NPC names
+        // If false, remove all rules from the string to create a list of only the NPC names/ids
         if (!includeRuleDisplay) {
-            List<String> strippedNpcNames = new ArrayList<>(selectedNpcNamesRaw);
+            List<String> strippedValues = new ArrayList<>(rawValues);
 
-            // Strips the rule suffixes from each name if present
-            strippedNpcNames.replaceAll(npcName -> {
-                if (!npcName.contains(":")) {
-                    return npcName;
+            // Strips the rule suffixes from each entry if present
+            strippedValues.replaceAll(entry -> {
+                if (!entry.contains(":")) {
+                    return entry;
                 }
 
                 // Handle edge cases like "::" or ":::".. where split[0] would be empty or non-existent
-                String[] parts = npcName.split(":");
-                return parts.length > 0 && !parts[0].isEmpty() ? parts[0] : npcName;
+                String[] parts = entry.split(":");
+                return parts.length > 0 && !parts[0].isEmpty() ? parts[0] : entry;
             });
 
-            return strippedNpcNames;
+            return strippedValues;
         }
 
-        return selectedNpcNamesRaw;
-    }
-
-    @VisibleForTesting
-    List<String> getSelectedNpcIds() {
-        String configNPCIDs = config.npcIdToShowHp().toLowerCase();
-        if (configNPCIDs.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return Text.fromCSV(configNPCIDs);
+        return rawValues;
     }
 
     
@@ -332,6 +335,13 @@ public class MonsterHPPlugin extends Plugin {
                 return rule.numeric;
             }
         }
+        String npcId = String.valueOf(npc.getId());
+        for (String idRaw : selectedNpcIDsWithRules) {
+            NpcRule rule = getNpcRule(idRaw);
+            if (rule.namePattern.equals(npcId)) {
+                return rule.numeric;
+            }
+        }
         return false;
     }
 
@@ -340,6 +350,13 @@ public class MonsterHPPlugin extends Plugin {
         for (String npcRaw : selectedNpcsWithRules) {
             NpcRule rule = getNpcRule(npcRaw);
             if (WildcardMatcher.matches(rule.namePattern, npcName)) {
+                return rule.threshold;
+            }
+        }
+        String npcId = String.valueOf(npc.getId());
+        for (String idRaw : selectedNpcIDsWithRules) {
+            NpcRule rule = getNpcRule(idRaw);
+            if (rule.namePattern.equals(npcId)) {
                 return rule.threshold;
             }
         }
@@ -403,12 +420,15 @@ public class MonsterHPPlugin extends Plugin {
     public static NpcRule getNpcRule(String npcRaw) {
         String[] parts = npcRaw.split(":");
 
-        // Name should always be first part index e.g., 'Guard' from: 'Guard:n:10'.
+        // Name/id should always be first part index e.g., 'Guard' from: 'Guard:n:10'.
         String name = (parts.length > 0 && !parts[0].isEmpty()) ? parts[0] : "";
         boolean numeric = false;
         Integer threshold = null;
 
-        for (String s : parts) {
+        // Start from index 1 to skip the name/id part
+        // so a numeric id like "1234" is never misread as a threshold
+        for (int i = 1; i < parts.length; i++) {
+            String s = parts[i];
             if (s.equalsIgnoreCase("n")) {
                 numeric = true;
             } else {
