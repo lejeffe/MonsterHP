@@ -235,7 +235,12 @@ public class MonsterHPPlugin extends Plugin {
         npcLocations.put(wnpc.getNpcIndex(), wnpc.getCurrentLocation());
     }
 
-    private boolean isNpcNameInShowAllBlacklist(String npcName) {
+    private boolean isNpcNameInShowAllBlacklist(NPC npc, String npcName) {
+        // Edge case for shooting stars to solve it's null naming
+        if (npc.getId() == STAR_HEADBAR_NPC && npcShowAllBlacklist.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, "crashed star"))) {
+            return true;
+        }
+
         // Check for exact match or wildcard match
         return npcName != null && (npcShowAllBlacklist.contains(npcName) ||
                 npcShowAllBlacklist.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, npcName)));
@@ -260,7 +265,7 @@ public class MonsterHPPlugin extends Plugin {
         boolean isInList = (isNpcNameInList(npcNameLower) || isNpcIdInList(npc.getId()));
 
         if (!isInList) {
-            return this.npcShowAll && !isNpcNameInShowAllBlacklist(npcNameLower);
+            return this.npcShowAll && !isNpcNameInShowAllBlacklist(npc, npcNameLower);
         }
 
         return true;
