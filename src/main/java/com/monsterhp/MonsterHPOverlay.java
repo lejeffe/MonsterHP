@@ -87,7 +87,11 @@ public class MonsterHPOverlay extends Overlay {
         }
 
         // Percentage
-        return getNpcDecimalHealthPercentage(wnpc.getHealthRatio());
+        String percentageString = getNpcDecimalHealthPercentage(wnpc.getHealthRatio());
+        if (config.appendPercentSymbol()) {
+            percentageString += "%";
+        }
+        return percentageString;
     }
 
     // Returns health ratio formatted by user decimal health config value
@@ -170,9 +174,6 @@ public class MonsterHPOverlay extends Overlay {
         }
 
         String currentHPString = getCurrentHpString(wnpc);
-        if (config.appendPercentSymbol() && !isUsingNumeric) {
-            currentHPString += "%";
-        }
 
         if (config.stackHp()) {
             /*
