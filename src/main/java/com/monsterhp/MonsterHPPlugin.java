@@ -100,8 +100,7 @@ public class MonsterHPPlugin extends Plugin {
 
         WanderingNPC wnpc = new WanderingNPC(npc);
 
-        if (isNpcNumericDefined(npc))
-            wnpc.setIsTypeNumeric(1);
+        wnpc.setHpDisplayType(getNpcDisplayType(npc));
 
         Integer thresholdOverride = getNpcThreshold(npc);
         if (thresholdOverride != null)
@@ -150,8 +149,7 @@ public class MonsterHPPlugin extends Plugin {
         if (isNpcInList(npc)) {
             WanderingNPC wnpc = new WanderingNPC(npc);
 
-            if (isNpcNumericDefined(npc))
-                wnpc.setIsTypeNumeric(1);
+            wnpc.setHpDisplayType(getNpcDisplayType(npc));
 
             Integer thresholdOverride = getNpcThreshold(npc);
             if (thresholdOverride != null)
@@ -332,22 +330,22 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     
-    boolean isNpcNumericDefined(NPC npc) {
+    NpcRule.DisplayType getNpcDisplayType(NPC npc) {
         String npcName = Objects.requireNonNull(npc.getName()).toLowerCase();
         for (String npcRaw : selectedNpcsWithRules) {
             NpcRule rule = getNpcRule(npcRaw);
             if (WildcardMatcher.matches(rule.namePattern, npcName)) {
-                return rule.numeric;
+                return rule.displayType;
             }
         }
         String npcId = String.valueOf(npc.getId());
         for (String idRaw : selectedNpcIDsWithRules) {
             NpcRule rule = getNpcRule(idRaw);
             if (rule.namePattern.equals(npcId)) {
-                return rule.numeric;
+                return rule.displayType;
             }
         }
-        return false;
+        return NpcRule.DisplayType.DEFAULT;
     }
 
     Integer getNpcThreshold(NPC npc) {
@@ -381,8 +379,7 @@ public class MonsterHPPlugin extends Plugin {
             if (isNpcInList(npc)) {
                 WanderingNPC wnpc = new WanderingNPC(npc);
 
-                if (isNpcNumericDefined(npc))
-                    wnpc.setIsTypeNumeric(1);
+                wnpc.setHpDisplayType(getNpcDisplayType(npc));
 
                 Integer thresholdOverride = getNpcThreshold(npc);
                 if (thresholdOverride != null)
@@ -427,7 +424,7 @@ public class MonsterHPPlugin extends Plugin {
 
         // Name/id should always be first part index e.g., 'Guard' from: 'Guard:n:10'.
         String name = (parts.length > 0 && !parts[0].isEmpty()) ? parts[0] : "";
-        boolean numeric = false;
+        NpcRule.DisplayType displayType = NpcRule.DisplayType.DEFAULT;
         Integer threshold = null;
 
         // Start from index 1 to skip the name/id part
@@ -435,7 +432,9 @@ public class MonsterHPPlugin extends Plugin {
         for (int i = 1; i < parts.length; i++) {
             String s = parts[i];
             if (s.equalsIgnoreCase("n")) {
-                numeric = true;
+                displayType = NpcRule.DisplayType.NUMERIC;
+            } else if (s.equalsIgnoreCase("p")) {
+                displayType = NpcRule.DisplayType.PERCENTAGE;
             } else {
                 try {
                     threshold = Integer.parseInt(s);
@@ -444,6 +443,6 @@ public class MonsterHPPlugin extends Plugin {
             }
         }
 
-        return new NpcRule(name, numeric, threshold);
+        return new NpcRule(name, displayType, threshold);
     }
 }

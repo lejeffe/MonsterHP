@@ -67,8 +67,14 @@ public class MonsterHPOverlay extends Overlay {
         return null;
     }
 
+    private boolean useNumericDisplay(WanderingNPC wnpc) {
+        NpcRule.DisplayType displayType = wnpc.getHpDisplayType();
+        return displayType == NpcRule.DisplayType.NUMERIC
+            || (displayType == NpcRule.DisplayType.DEFAULT && config.numericAllHealth());
+    }
+
     private String getCurrentHpString(WanderingNPC wnpc) {
-        boolean showNumericHealth = config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1;
+        boolean showNumericHealth = useNumericDisplay(wnpc);
         NPC npc = wnpc.getNpc();
 
         // Numeric
@@ -135,7 +141,7 @@ public class MonsterHPOverlay extends Overlay {
 
         // Use Numeric health
         // TLDR: (isSupportsNumeric check required for later % symbol concatenation)
-        boolean isUsingNumeric = (config.numericAllHealth() || wnpc.getIsTypeNumeric() == 1) && wnpc.isSupportsNumeric();
+        boolean isUsingNumeric = useNumericDisplay(wnpc) && wnpc.isSupportsNumeric();
         if (isUsingNumeric && maxHealth != null) {
             // Use the current health ratio and round it according to monsters max hp
             double numericHealth = (int) Math.round((wNpcHealthRatio / 100) * maxHealth);
