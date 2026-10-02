@@ -44,7 +44,7 @@ public class WanderingNPC {
 
     @Getter
     @Setter
-    private int isTypeNumeric;
+    private NpcRule.DisplayType hpDisplayType;
 
     @Getter
     @Setter
@@ -65,7 +65,7 @@ public class WanderingNPC {
         this.healthScale = npc.getHealthScale();
         this.isDead = false;
         this.offset = 0;
-        this.isTypeNumeric = 0;
+        this.hpDisplayType = NpcRule.DisplayType.DEFAULT;
         this.healthThreshold = 0;
         this.supportsNumeric = true;
     }
