@@ -1,13 +1,19 @@
 package com.monsterhp;
 
 public class NpcRule {
+    public static enum DisplayType {
+        DEFAULT,
+        NUMERIC,
+        PERCENTAGE
+    }
+
     public final String namePattern;
-    public final boolean numeric;
+    public final DisplayType displayType;
     public final Integer threshold;
 
-    public NpcRule(String namePattern, boolean numeric, Integer threshold) {
+    public NpcRule(String namePattern, DisplayType displayType, Integer threshold) {
         this.namePattern = namePattern;
-        this.numeric = numeric;
+        this.displayType = displayType;
         this.threshold = threshold;
     }
 }
