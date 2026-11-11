@@ -245,9 +245,24 @@ public class MonsterHPPlugin extends Plugin {
     }
 
     private boolean isNpcNameInList(String npcName) {
+        if (npcName == null) {
+            return false;
+        }
+
         // Check for exact match or wildcard match
-        return npcName != null && (selectedNpcs.contains(npcName) ||
-                selectedNpcs.stream().anyMatch(pattern -> WildcardMatcher.matches(pattern, npcName)));
+        // This runs for every NPC on every game tick, so only patterns that actually contain a
+        // wildcard go through the (regex based) wildcard matcher; with a long name list the
+        // difference is thousands of regex compilations per tick.
+        final String name = npcName.replace('\u00A0', ' ');
+        if (selectedNpcs.contains(name)) {
+            return true;
+        }
+        for (String pattern : selectedNpcs) {
+            if (pattern.indexOf('*') >= 0 && WildcardMatcher.matches(pattern, name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isNpcIdInList(int npcId) {
