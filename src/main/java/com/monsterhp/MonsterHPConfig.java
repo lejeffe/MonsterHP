@@ -384,4 +384,16 @@ public interface MonsterHPConfig extends Config {
     {
         return false;
     }
+
+    @ConfigItem(
+            keyName = "numericAndPercentage",
+            name = "Numeric and percentage",
+            description = "Show the numeric health followed by the percentage, e.g. 450 (75%). Monsters without a known numeric health keep showing the percentage only.",
+            position = 28,
+            section = hp_settings
+    )
+    default boolean numericAndPercentage()
+    {
+        return false;
+    }
 }

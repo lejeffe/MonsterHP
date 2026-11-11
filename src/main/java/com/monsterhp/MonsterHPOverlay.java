@@ -180,6 +180,14 @@ public class MonsterHPOverlay extends Overlay {
             currentHPString += "%";
         }
 
+        // Numeric health followed by the percentage, when the numeric health is known
+        if (config.numericAndPercentage() && maxHealth != null && maxHealth > 0) {
+            int numericHealth = BossUtil.isNpcBoss(npc)
+                ? client.getVarbitValue(HPBAR_HUD_HP)
+                : (int) Math.round((wNpcHealthRatio / 100) * maxHealth);
+            currentHPString = numericHealth + " (" + getNpcDecimalHealthPercentage(wNpcHealthRatio) + "%)";
+        }
+
         if (config.stackHp()) {
             /*
              * Stack method created by github.com/MoreBuchus in his tzhaar-hp-tracker plugin
